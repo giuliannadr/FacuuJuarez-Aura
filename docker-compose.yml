@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aura_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aura
+      POSTGRES_PASSWORD: aura_dev_password
+      POSTGRES_DB: aura_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aura -d aura_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Admin dashboard
+  aura-admin:
+    build:
+      context: .
+      dockerfile: apps/aura-admin/Dockerfile
+    container_name: aura_admin
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://aura:aura_dev_password@postgres:5432/aura_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # DJ landing
+  facundo-landing:
+    build:
+      context: .
+      dockerfile: apps/facundo-landing/Dockerfile
+    container_name: facundo_landing
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # AURA website
+  aura-web:
+    build:
+      context: .
+      dockerfile: apps/aura-web/Dockerfile
+    container_name: aura_web
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
