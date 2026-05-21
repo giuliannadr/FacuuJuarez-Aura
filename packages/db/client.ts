@@ -1,11 +1,18 @@
+import { drizzle } from 'drizzle-orm/node-postgres'
 import { createClient } from '@supabase/supabase-js'
+import * as schema from './schema'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Drizzle — para queries tipadas desde Server Components y API routes
+export const db = drizzle(process.env.DATABASE_URL!, { schema })
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Supabase client — para auth y storage (no para queries de DB)
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
-export const createServerClient = (serviceRoleKey: string) =>
-  createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
+export const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+)
