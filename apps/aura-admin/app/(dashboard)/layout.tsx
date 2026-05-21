@@ -1,0 +1,23 @@
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { getSession } from '@/lib/supabase'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { Header } from '@/components/layout/Header'
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession()
+  if (!session) redirect('/login')
+
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? '/dashboard'
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar profile={session.profile} />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header profile={session.profile} pathname={pathname} />
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      </div>
+    </div>
+  )
+}
