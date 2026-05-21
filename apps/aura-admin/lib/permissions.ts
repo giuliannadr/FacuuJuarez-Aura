@@ -7,6 +7,7 @@ export const ROLE_PERMISSIONS = {
     canManageTeam: true,
     canViewAllBookings: true,
     canViewMergedCalendar: true,
+    canManageEvents: true, // crea y edita eventos de ambos contextos
   },
   aura_admin: {
     canEditFacundoContent: false,
@@ -14,6 +15,7 @@ export const ROLE_PERMISSIONS = {
     canManageTeam: false,
     canViewAllBookings: true,
     canViewMergedCalendar: false,
+    canManageEvents: true, // solo eventos de AURA
   },
   aura_member: {
     canEditFacundoContent: false,
@@ -21,6 +23,7 @@ export const ROLE_PERMISSIONS = {
     canManageTeam: false,
     canViewAllBookings: false,
     canViewMergedCalendar: false,
+    canManageEvents: false,
   },
 } as const
 
@@ -67,6 +70,12 @@ export const NAV_ITEMS = [
     href: '/availability',
     icon: 'Clock',
     roles: ['facundo', 'aura_admin', 'aura_member'] as Role[],
+  },
+  {
+    label: 'Eventos',
+    href: '/events',
+    icon: 'Sparkles',
+    roles: ['facundo', 'aura_admin'] as Role[],
   },
   {
     label: 'Equipo',

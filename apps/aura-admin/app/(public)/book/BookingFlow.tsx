@@ -6,7 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Check, ChevronLeft, Loader2, Users, CalendarDays, ClipboardList } from 'lucide-react'
-import { bookingContactSchema, type BookingContactInput } from '@/lib/schemas/booking'
+import {
+  bookingContactSchema,
+  MEETING_TYPES,
+  type BookingContactInput,
+} from '@/lib/schemas/booking'
 import { createBooking } from '@/app/(dashboard)/bookings/actions'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -344,6 +348,28 @@ export function BookingFlow({ members, availableSlots }: BookingFlowProps) {
               </p>
             </div>
           )}
+
+          {/* Tipo de reunión */}
+          <Field label="¿Para qué necesitás la reunión?" error={errors.meetingType?.message}>
+            <div className="grid grid-cols-2 gap-3">
+              {MEETING_TYPES.map((type) => (
+                <label key={type.value} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    value={type.value}
+                    {...register('meetingType')}
+                    className="peer sr-only"
+                  />
+                  <div className="flex flex-col gap-1 rounded-xl border border-white/10 p-4 transition-all peer-checked:border-violet-500 peer-checked:bg-violet-500/10 hover:border-white/20">
+                    <span className="text-sm font-medium text-white peer-checked:text-violet-300">
+                      {type.label}
+                    </span>
+                    <span className="text-xs text-zinc-500">{type.description}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre completo" error={errors.clientName?.message}>

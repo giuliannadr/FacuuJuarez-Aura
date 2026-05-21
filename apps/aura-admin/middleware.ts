@@ -5,7 +5,7 @@ import { can, type Role } from '@/lib/permissions'
 const PUBLIC_ROUTES = ['/login', '/book']
 
 // Rutas públicas por prefijo
-const PUBLIC_PREFIXES = ['/book']
+const PUBLIC_PREFIXES = ['/book', '/event']
 
 // Rutas que requieren permiso específico
 const PROTECTED_ROUTES: { pattern: RegExp; permission: Parameters<typeof can>[1] }[] = [

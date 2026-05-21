@@ -3,8 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard, UserCircle, Building2, CalendarDays,
-  Clock, Users, Settings, Music2,
+  LayoutDashboard,
+  UserCircle,
+  Building2,
+  CalendarDays,
+  Clock,
+  Users,
+  Settings,
+  Music2,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, type Role } from '@/lib/permissions'
@@ -12,7 +19,14 @@ import { Separator } from '@/components/ui/separator'
 import type { SessionProfile } from '@/types'
 
 const ICONS: Record<string, React.ElementType> = {
-  LayoutDashboard, UserCircle, Building2, CalendarDays, Clock, Users, Settings,
+  LayoutDashboard,
+  UserCircle,
+  Building2,
+  CalendarDays,
+  Clock,
+  Users,
+  Settings,
+  Sparkles,
 }
 
 const ROLE_LABELS: Record<Role, string> = {
