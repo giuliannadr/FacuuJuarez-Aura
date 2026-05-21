@@ -2,7 +2,10 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { can, type Role } from '@/lib/permissions'
 
-const PUBLIC_ROUTES = ['/login']
+const PUBLIC_ROUTES = ['/login', '/book']
+
+// Rutas públicas por prefijo
+const PUBLIC_PREFIXES = ['/book']
 
 // Rutas que requieren permiso específico
 const PROTECTED_ROUTES: { pattern: RegExp; permission: Parameters<typeof can>[1] }[] = [
@@ -33,10 +36,15 @@ export async function middleware(request: NextRequest) {
   // Inyecta pathname como header para que Server Components puedan leerlo
   response.headers.set('x-pathname', pathname)
 
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  const isPublic =
+    PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
 
   // Redirige a /login si no hay sesión y la ruta no es pública
-  if (!session && !PUBLIC_ROUTES.includes(pathname)) {
+  if (!session && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
