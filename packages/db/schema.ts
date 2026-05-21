@@ -34,6 +34,7 @@ export const participantStatusEnum = pgEnum('participant_status', [
   'accepted',
   'rejected',
 ])
+export const meetingTypeEnum = pgEnum('meeting_type', ['meeting', 'quote'])
 
 // ─── Profiles ─────────────────────────────────────────────────────────────────
 export const profiles = pgTable('profiles', {
@@ -93,6 +94,7 @@ export const availabilitySlots = pgTable(
 export const bookings = pgTable('bookings', {
   id: uuid('id').primaryKey().defaultRandom(),
   context: bookingContextEnum('context').notNull(),
+  meetingType: meetingTypeEnum('meeting_type').notNull().default('meeting'),
   clientName: text('client_name').notNull(),
   clientEmail: text('client_email').notNull(),
   subject: text('subject').notNull(),
@@ -157,6 +159,19 @@ export const eventMembers = pgTable(
   (t) => [primaryKey({ columns: [t.eventId, t.memberId] })]
 )
 
+// ─── Event comments (portal de cliente) ──────────────────────────────────────
+export const eventComments = pgTable('event_comments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: uuid('event_id')
+    .notNull()
+    .references(() => events.id, { onDelete: 'cascade' }),
+  authorEmail: text('author_email').notNull(),
+  authorName: text('author_name').notNull(),
+  body: text('body').notNull(),
+  isFromTeam: boolean('is_from_team').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 // ─── Inferred types ───────────────────────────────────────────────────────────
 export type Profile = typeof profiles.$inferSelect
 export type ContentBlock = typeof contentBlocks.$inferSelect
@@ -170,3 +185,5 @@ export type NewAvailabilitySlot = typeof availabilitySlots.$inferInsert
 export type Event = typeof events.$inferSelect
 export type EventMember = typeof eventMembers.$inferSelect
 export type NewEvent = typeof events.$inferInsert
+export type EventComment = typeof eventComments.$inferSelect
+export type NewEventComment = typeof eventComments.$inferInsert

@@ -96,6 +96,7 @@ export function BookingFlow({ members, availableSlots }: BookingFlowProps) {
     null
   )
   const [done, setDone] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -159,7 +160,17 @@ export function BookingFlow({ members, availableSlots }: BookingFlowProps) {
       ...data,
     })
 
-    if (result.success) setDone(true)
+    if (result.success) {
+      setDone(true)
+    } else {
+      setServerError(result.error)
+      // Si es un conflicto de horario, volver al paso de selección
+      if (result.error.includes('horario')) {
+        setSelectedDate(null)
+        setSelectedSlot(null)
+        setStep(1)
+      }
+    }
   }
 
   // ─── Success screen ──────────────────────────────────────────────────────
@@ -261,6 +272,11 @@ export function BookingFlow({ members, availableSlots }: BookingFlowProps) {
       {/* ─── Step 1: Horario ───────────────────────────────────────────── */}
       {step === 1 && (
         <div className="space-y-6">
+          {serverError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+              {serverError}
+            </div>
+          )}
           {availableDates.length === 0 ? (
             <div className="rounded-lg border border-white/5 bg-white/[0.02] p-8 text-center">
               <p className="text-sm text-zinc-400">
@@ -291,6 +307,7 @@ export function BookingFlow({ members, availableSlots }: BookingFlowProps) {
                           onClick={() => {
                             setSelectedDate(date)
                             setSelectedSlot(slot)
+                            setServerError(null)
                           }}
                           className={cn(
                             'rounded-lg border px-4 py-2 text-sm font-medium transition-all',

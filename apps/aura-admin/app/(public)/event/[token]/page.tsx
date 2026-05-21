@@ -4,8 +4,13 @@ import { es } from 'date-fns/locale'
 import { CalendarDays, MapPin, Music2, CheckCircle2 } from 'lucide-react'
 import { EVENT_STATUSES, type EventStatus } from '@/lib/schemas/event'
 import { cn } from '@/lib/utils'
+import { ClientPortal, type EventCommentData } from './ClientPortal'
 
-// Mock — se reemplaza con:
+// Mock comments — se reemplaza con:
+// db.select().from(eventComments).where(eq(eventComments.eventId, event.id)).orderBy(asc(eventComments.createdAt))
+const MOCK_COMMENTS: EventCommentData[] = []
+
+// Mock event — se reemplaza con:
 // db.query.events.findFirst({ where: eq(events.shareToken, token), with: { members: true } })
 const MOCK_EVENTS: Record<
   string,
@@ -13,6 +18,7 @@ const MOCK_EVENTS: Record<
     title: string
     context: 'aura' | 'facundo_solo'
     clientName: string
+    clientEmail: string
     serviceDescription: string | null
     price: string | null
     currency: string
@@ -28,6 +34,7 @@ const MOCK_EVENTS: Record<
     title: 'Boda García',
     context: 'aura',
     clientName: 'Romina García',
+    clientEmail: 'romina@example.com',
     serviceDescription:
       'DJ set de 6 horas + iluminación personalizada. Incluye setup, prueba de sonido y rider técnico completo.',
     price: '180000',
@@ -212,6 +219,13 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
             </div>
           </div>
         )}
+
+        {/* Portal de cliente — login + mensajes en tiempo real */}
+        <ClientPortal
+          eventId={token}
+          clientEmail={event.clientEmail}
+          initialComments={MOCK_COMMENTS}
+        />
 
         <p className="text-center text-xs text-zinc-700">{agencyName} · Powered by AURA Admin</p>
       </main>
