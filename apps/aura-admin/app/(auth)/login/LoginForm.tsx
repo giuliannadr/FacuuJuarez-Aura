@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 
@@ -66,9 +66,7 @@ export function LoginForm() {
         />
       </div>
 
-      {error && (
-        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>
-      )}
+      {error && <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
 
       <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-500" disabled={loading}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Iniciar sesión'}

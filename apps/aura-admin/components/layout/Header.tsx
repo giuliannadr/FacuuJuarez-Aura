@@ -2,7 +2,7 @@
 
 import { LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { createSupabaseBrowserClient } from '@/lib/supabase'
+import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { SessionProfile } from '@/types'
@@ -26,9 +26,8 @@ export function Header({ profile, pathname }: HeaderProps) {
   const router = useRouter()
   const supabase = createSupabaseBrowserClient()
 
-  const pageTitle = Object.entries(CONTEXT_LABELS).find(([key]) =>
-    pathname.startsWith(key)
-  )?.[1] ?? 'Dashboard'
+  const pageTitle =
+    Object.entries(CONTEXT_LABELS).find(([key]) => pathname.startsWith(key))?.[1] ?? 'Dashboard'
 
   async function handleLogout() {
     await supabase.auth.signOut()
