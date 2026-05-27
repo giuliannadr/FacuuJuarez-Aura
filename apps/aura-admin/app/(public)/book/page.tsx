@@ -3,6 +3,8 @@ import { db, profiles, contentBlocks } from '@aura/db'
 import { buildAvailableSlots } from '@/lib/slotUtils'
 import { BookingFlow } from './BookingFlow'
 
+export const dynamic = 'force-dynamic'
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function BookPage() {

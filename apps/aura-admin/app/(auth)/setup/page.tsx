@@ -4,6 +4,7 @@ import { db, profiles } from '@aura/db'
 import { Music2 } from 'lucide-react'
 import { SetupForm } from './SetupForm'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Configuración inicial — AURA Admin' }
 
 export default async function SetupPage() {

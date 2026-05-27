@@ -3,6 +3,8 @@ import { db, profiles } from '@aura/db'
 import { buildAvailableSlots } from '@/lib/slotUtils'
 import { BookingFlow } from '@/app/(public)/book/BookingFlow'
 
+export const dynamic = 'force-dynamic'
+
 export default async function FacuPage() {
   const [facuProfile] = await db
     .select({ id: profiles.id, name: profiles.name })
