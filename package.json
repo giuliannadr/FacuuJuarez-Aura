@@ -28,5 +28,8 @@
     "**/*.{ts,tsx,json,md,css}": [
       "prettier --write"
     ]
+  },
+  "overrides": {
+    "react-hook-form": "7.76.0"
   }
 }
