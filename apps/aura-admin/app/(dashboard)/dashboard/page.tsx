@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { CalendarDays, CheckCircle2, Users, XCircle, Clock, Sparkles } from 'lucide-react'
 import { CopyBookingLinkButton } from '@/components/layout/CopyBookingLinkButton'
-import { eq, and, gte, lte, desc, count, inArray, isNull } from 'drizzle-orm'
+import { eq, and, gte, lte, desc, count, inArray, isNull, or, gt } from 'drizzle-orm'
 import { db, bookings, bookingParticipants, profiles, secondBookingTokens, clients } from '@aura/db'
 import { getSession } from '@/lib/supabase'
 import { can } from '@/lib/permissions'
@@ -14,18 +14,20 @@ import type { BookingDetail } from '@/components/features/bookings/BookingDetail
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// ART = UTC−3, sin horario de verano
 function getWeekBounds() {
-  const today = new Date()
-  const day = today.getDay()
+  const artNow = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const day = artNow.getUTCDay()
   const diffToMonday = day === 0 ? -6 : 1 - day
-  const monday = new Date(today)
-  monday.setDate(today.getDate() + diffToMonday)
+  const monday = new Date(artNow)
+  monday.setUTCDate(artNow.getUTCDate() + diffToMonday)
   const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
+  sunday.setUTCDate(monday.getUTCDate() + 6)
   return {
-    weekStart: monday.toISOString().split('T')[0],
-    weekEnd: sunday.toISOString().split('T')[0],
-    today: today.toISOString().split('T')[0],
+    weekStart: monday.toISOString().slice(0, 10),
+    weekEnd: sunday.toISOString().slice(0, 10),
+    today: artNow.toISOString().slice(0, 10),
+    nowTime: artNow.toISOString().slice(11, 16), // 'HH:MM' actual en ART
   }
 }
 
@@ -37,10 +39,15 @@ export default async function DashboardPage() {
 
   const { profile } = session
   const showMergedCalendar = can(profile.role, 'canViewMergedCalendar')
-  const { weekStart, weekEnd, today } = getWeekBounds()
+  const { weekStart, weekEnd, today, nowTime } = getWeekBounds()
 
   const isAdmin =
     profile.role === 'facundo' || profile.role === 'aura_admin' || profile.isCoordinator
+
+  // Facundo ve todos los contextos; aura_admin/coordinadores solo ven reservas de AURA
+  const isFacundo = profile.role === 'facundo'
+  // drizzle's and() ignora undefined → sin filtro para facundo
+  const ctxFilter = isFacundo ? undefined : eq(bookings.context, 'aura')
 
   // ── Stats role-aware ────────────────────────────────────────────────────────
 
@@ -68,7 +75,7 @@ export default async function DashboardPage() {
     const [pendingRes] = await db
       .select({ value: count() })
       .from(bookings)
-      .where(eq(bookings.status, 'pending'))
+      .where(and(eq(bookings.status, 'pending'), ctxFilter))
 
     // 2. Confirmadas esta semana (por fecha de reunión)
     const [confirmedRes] = await db
@@ -78,7 +85,8 @@ export default async function DashboardPage() {
         and(
           eq(bookings.status, 'confirmed'),
           gte(bookings.date, weekStart),
-          lte(bookings.date, weekEnd)
+          lte(bookings.date, weekEnd),
+          ctxFilter
         )
       )
 
@@ -190,7 +198,17 @@ export default async function DashboardPage() {
           clientId: bookings.clientId,
         })
         .from(bookings)
-        .where(and(eq(bookings.status, 'confirmed'), gte(bookings.date, today)))
+        .where(
+          and(
+            eq(bookings.status, 'confirmed'),
+            // Mostrar: fechas futuras O hoy si la reunión aún no terminó
+            or(
+              gt(bookings.date, today),
+              and(eq(bookings.date, today), gte(bookings.endTime, nowTime))
+            ),
+            ctxFilter
+          )
+        )
         .orderBy(bookings.date, bookings.startTime)
         .limit(1)
       nextRaw = row
@@ -220,7 +238,10 @@ export default async function DashboardPage() {
           .where(
             and(
               eq(bookings.status, 'confirmed'),
-              gte(bookings.date, today),
+              or(
+                gt(bookings.date, today),
+                and(eq(bookings.date, today), gte(bookings.endTime, nowTime))
+              ),
               inArray(
                 bookings.id,
                 myParts.map((p) => p.bookingId)
@@ -284,6 +305,10 @@ export default async function DashboardPage() {
         clientId: bookings.clientId,
       })
       .from(bookings)
+      // Excluir primera reunión que ya tiene segunda reserva habilitada
+      // (esas solo aparecen en /bookings, no en el dashboard)
+      .leftJoin(secondBookingTokens, eq(secondBookingTokens.firstBookingId, bookings.id))
+      .where(and(ctxFilter, isNull(secondBookingTokens.id)))
       .orderBy(desc(bookings.createdAt))
       .limit(10)
 
@@ -348,7 +373,8 @@ export default async function DashboardPage() {
           clientId: bookings.clientId,
         })
         .from(bookings)
-        .where(inArray(bookings.id, ids))
+        .leftJoin(secondBookingTokens, eq(secondBookingTokens.firstBookingId, bookings.id))
+        .where(and(inArray(bookings.id, ids), isNull(secondBookingTokens.id)))
         .orderBy(desc(bookings.createdAt))
         .limit(10)
 
@@ -413,7 +439,8 @@ export default async function DashboardPage() {
         and(
           eq(bookings.meetingRound, 1),
           eq(bookings.status, 'confirmed'),
-          isNull(secondBookingTokens.id)
+          isNull(secondBookingTokens.id),
+          ctxFilter
         )
       )
       .orderBy(desc(bookings.createdAt))

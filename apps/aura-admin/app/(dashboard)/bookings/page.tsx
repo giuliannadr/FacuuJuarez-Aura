@@ -46,6 +46,9 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
   }[] = []
 
   if (canSeeSecondBookingSection) {
+    // aura_admin/coordinadores solo ven reservas de AURA; facundo ve todos los contextos
+    const bookingCtxFilter = profile.role !== 'facundo' ? eq(bookings.context, 'aura') : undefined
+
     const raw = await db
       .select({
         id: bookings.id,
@@ -62,7 +65,8 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
         and(
           eq(bookings.meetingRound, 1),
           eq(bookings.status, 'confirmed'),
-          isNull(secondBookingTokens.id)
+          isNull(secondBookingTokens.id),
+          bookingCtxFilter
         )
       )
       .orderBy(desc(bookings.createdAt))
