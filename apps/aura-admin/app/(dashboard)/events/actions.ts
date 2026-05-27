@@ -1,6 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { eq } from 'drizzle-orm'
+import { db, events, eventMembers } from '@aura/db'
 import { eventFormSchema, type EventFormInput } from '@/lib/schemas/event'
 import { getSession } from '@/lib/supabase'
 import { can } from '@/lib/permissions'
@@ -27,38 +29,39 @@ export async function createEvent(raw: unknown): Promise<ActionResult<{ id: stri
 
   const shareToken = randomUUID()
 
-  // TODO: reemplazar con Drizzle cuando esté la DB
-  // const [event] = await db.insert(events).values({
-  //   context: data.context,
-  //   title: data.title,
-  //   clientName: data.clientName,
-  //   clientEmail: data.clientEmail,
-  //   serviceDescription: data.serviceDescription,
-  //   price: data.price,
-  //   currency: data.currency,
-  //   showPrice: data.showPrice,
-  //   eventDate: data.eventDate,
-  //   eventTime: data.eventTime,
-  //   venue: data.venue,
-  //   status: data.status,
-  //   notes: data.notes,
-  //   shareToken,
-  //   createdBy: session.profile.id,
-  // }).returning()
-  //
-  // await db.insert(eventMembers).values(
-  //   data.memberIds.map((memberId) => ({
-  //     eventId: event.id,
-  //     memberId,
-  //     memberRole: data.memberRoles?.[memberId],
-  //   }))
-  // )
+  const [event] = await db
+    .insert(events)
+    .values({
+      context: data.context,
+      title: data.title,
+      clientName: data.clientName,
+      clientEmail: data.clientEmail,
+      serviceDescription: data.serviceDescription,
+      price: data.price,
+      currency: data.currency,
+      showPrice: data.showPrice,
+      eventDate: data.eventDate,
+      eventTime: data.eventTime,
+      venue: data.venue,
+      status: data.status,
+      notes: data.notes,
+      shareToken,
+      createdBy: session.profile.id,
+    })
+    .returning()
 
-  const mockId = randomUUID()
-  console.log('[createEvent] mock insert:', { ...data, shareToken, id: mockId })
+  if (data.memberIds.length > 0) {
+    await db.insert(eventMembers).values(
+      data.memberIds.map((memberId) => ({
+        eventId: event.id,
+        memberId,
+        memberRole: data.memberRoles?.[memberId],
+      }))
+    )
+  }
 
   revalidatePath('/events')
-  return { success: true, data: { id: mockId } }
+  return { success: true, data: { id: event.id } }
 }
 
 export async function updateEvent(id: string, raw: unknown): Promise<ActionResult> {
@@ -71,8 +74,40 @@ export async function updateEvent(id: string, raw: unknown): Promise<ActionResul
   const parsed = eventFormSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.issues[0].message }
 
-  // TODO: Drizzle update
-  console.log('[updateEvent] mock update:', { id, ...parsed.data })
+  const data: EventFormInput = parsed.data
+
+  await db
+    .update(events)
+    .set({
+      context: data.context,
+      title: data.title,
+      clientName: data.clientName,
+      clientEmail: data.clientEmail,
+      serviceDescription: data.serviceDescription,
+      price: data.price,
+      currency: data.currency,
+      showPrice: data.showPrice,
+      eventDate: data.eventDate,
+      eventTime: data.eventTime,
+      venue: data.venue,
+      status: data.status,
+      notes: data.notes,
+      updatedAt: new Date(),
+    })
+    .where(eq(events.id, id))
+
+  // Reemplazar miembros: borrar todos e insertar los nuevos
+  await db.delete(eventMembers).where(eq(eventMembers.eventId, id))
+
+  if (data.memberIds.length > 0) {
+    await db.insert(eventMembers).values(
+      data.memberIds.map((memberId) => ({
+        eventId: id,
+        memberId,
+        memberRole: data.memberRoles?.[memberId],
+      }))
+    )
+  }
 
   revalidatePath('/events')
   revalidatePath(`/events/${id}`)
@@ -86,8 +121,8 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
     return { success: false, error: 'Sin permisos' }
   }
 
-  // TODO: Drizzle delete
-  console.log('[deleteEvent] mock delete:', id)
+  // El cascade elimina eventMembers y eventComments automáticamente
+  await db.delete(events).where(eq(events.id, id))
 
   revalidatePath('/events')
   return { success: true }

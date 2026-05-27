@@ -2,57 +2,13 @@ import { notFound } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { CalendarDays, MapPin, Music2, CheckCircle2 } from 'lucide-react'
+import { eq } from 'drizzle-orm'
+import { db, events, eventMembers, eventComments, profiles } from '@aura/db'
 import { EVENT_STATUSES, type EventStatus } from '@/lib/schemas/event'
 import { cn } from '@/lib/utils'
 import { ClientPortal, type EventCommentData } from './ClientPortal'
 
-// Mock comments — se reemplaza con:
-// db.select().from(eventComments).where(eq(eventComments.eventId, event.id)).orderBy(asc(eventComments.createdAt))
-const MOCK_COMMENTS: EventCommentData[] = []
-
-// Mock event — se reemplaza con:
-// db.query.events.findFirst({ where: eq(events.shareToken, token), with: { members: true } })
-const MOCK_EVENTS: Record<
-  string,
-  {
-    title: string
-    context: 'aura' | 'facundo_solo'
-    clientName: string
-    clientEmail: string
-    serviceDescription: string | null
-    price: string | null
-    currency: string
-    showPrice: boolean
-    eventDate: string | null
-    eventTime: string | null
-    venue: string | null
-    status: EventStatus
-    members: { name: string; role: string | null; bio: string | null }[]
-  }
-> = {
-  tok_e1_demo: {
-    title: 'Boda García',
-    context: 'aura',
-    clientName: 'Romina García',
-    clientEmail: 'romina@example.com',
-    serviceDescription:
-      'DJ set de 6 horas + iluminación personalizada. Incluye setup, prueba de sonido y rider técnico completo.',
-    price: '180000',
-    currency: 'ARS',
-    showPrice: true,
-    eventDate: '2025-12-06',
-    eventTime: '21:00',
-    venue: 'Estancia La Paz, Cañuelas',
-    status: 'confirmed',
-    members: [
-      { name: 'Facundo', role: 'DJ Principal', bio: 'Más de 10 años de experiencia en eventos' },
-      { name: 'Valentina', role: 'Coordinación', bio: 'Producción y logística del evento' },
-    ],
-  },
-}
-
 const STATUS_MAP = Object.fromEntries(EVENT_STATUSES.map((s) => [s.value, s]))
-
 const STATUS_STEPS: EventStatus[] = ['confirmed', 'in_progress', 'completed']
 
 interface EventPublicPageProps {
@@ -61,23 +17,52 @@ interface EventPublicPageProps {
 
 export default async function EventPublicPage({ params }: EventPublicPageProps) {
   const { token } = await params
-  const event = MOCK_EVENTS[token]
+
+  // ── Obtener evento por shareToken ──────────────────────────────────────────
+  const [event] = await db.select().from(events).where(eq(events.shareToken, token)).limit(1)
+
   if (!event) notFound()
+
+  // ── Miembros del evento ────────────────────────────────────────────────────
+  const members = await db
+    .select({
+      name: profiles.name,
+      role: eventMembers.memberRole,
+      bio: profiles.bio,
+    })
+    .from(eventMembers)
+    .innerJoin(profiles, eq(profiles.id, eventMembers.memberId))
+    .where(eq(eventMembers.eventId, event.id))
+
+  // ── Comentarios ────────────────────────────────────────────────────────────
+  const rawComments = await db
+    .select()
+    .from(eventComments)
+    .where(eq(eventComments.eventId, event.id))
+    .orderBy(eventComments.createdAt)
+
+  const initialComments: EventCommentData[] = rawComments.map((c) => ({
+    id: c.id,
+    authorName: c.authorName,
+    authorEmail: c.authorEmail,
+    body: c.body,
+    isFromTeam: c.isFromTeam,
+    createdAt: c.createdAt.toISOString(),
+  }))
 
   const statusConf = STATUS_MAP[event.status]
   const agencyName = event.context === 'aura' ? 'AURA Agency' : 'Facundo DJ'
-
   const currentStep = STATUS_STEPS.indexOf(event.status as EventStatus)
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Header */}
-      <header className="border-b border-white/5 px-6 py-4">
+      <header className="border-b border-zinc-200 dark:border-white/5 px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600">
             <Music2 className="h-3.5 w-3.5 text-white" />
           </div>
-          <span className="text-sm font-semibold text-white">{agencyName}</span>
+          <span className="text-sm font-semibold text-zinc-900 dark:text-white">{agencyName}</span>
         </div>
       </header>
 
@@ -93,17 +78,17 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
           >
             {statusConf.label}
           </span>
-          <h1 className="text-2xl font-bold text-white">{event.title}</h1>
-          <p className="text-sm text-zinc-400">
-            Hola <span className="text-white">{event.clientName}</span>, este es el detalle de tu
-            evento. Podés consultarlo en cualquier momento desde este link.
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">{event.title}</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Hola <span className="text-zinc-900 dark:text-white">{event.clientName}</span>, este es
+            el detalle de tu evento. Podés consultarlo en cualquier momento desde este link.
           </p>
         </div>
 
         {/* Timeline de estado */}
         {event.status !== 'draft' && event.status !== 'cancelled' && (
-          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-5">
-            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          <div className="rounded-xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/[0.02] p-5">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
               Estado del evento
             </p>
             <div className="flex items-center gap-0">
@@ -117,19 +102,25 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
                       <div
                         className={cn(
                           'flex h-7 w-7 items-center justify-center rounded-full border transition-colors',
-                          done ? 'border-violet-500 bg-violet-500' : 'border-white/10'
+                          done
+                            ? 'border-violet-500 bg-violet-500'
+                            : 'border-zinc-200 dark:border-white/10'
                         )}
                       >
                         {done ? (
                           <CheckCircle2 className="h-4 w-4 text-white" />
                         ) : (
-                          <span className="h-2 w-2 rounded-full bg-white/10" />
+                          <span className="h-2 w-2 rounded-full bg-zinc-200 dark:bg-white/10" />
                         )}
                       </div>
                       <span
                         className={cn(
                           'text-[10px] font-medium text-center',
-                          active ? 'text-white' : done ? 'text-zinc-400' : 'text-zinc-700'
+                          active
+                            ? 'text-zinc-900 dark:text-white'
+                            : done
+                              ? 'text-zinc-500 dark:text-zinc-400'
+                              : 'text-zinc-300 dark:text-zinc-700'
                         )}
                       >
                         {conf.label}
@@ -139,7 +130,7 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
                       <div
                         className={cn(
                           'mx-2 mb-4 h-[1px] flex-1',
-                          i < currentStep ? 'bg-violet-500' : 'bg-white/5'
+                          i < currentStep ? 'bg-violet-500' : 'bg-zinc-200 dark:bg-white/5'
                         )}
                       />
                     )}
@@ -151,15 +142,15 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
         )}
 
         {/* Detalles */}
-        <div className="rounded-xl border border-white/5 bg-white/[0.02] divide-y divide-white/5">
+        <div className="rounded-xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/[0.02] divide-y divide-zinc-100 dark:divide-white/5">
           {event.eventDate && (
             <div className="flex items-start gap-3 p-5">
-              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+              <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
               <div>
-                <p className="text-xs text-zinc-500">Fecha y hora</p>
-                <p className="mt-0.5 text-sm font-medium text-white capitalize">
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">Fecha y hora</p>
+                <p className="mt-0.5 text-sm font-medium text-zinc-900 dark:text-white capitalize">
                   {format(parseISO(event.eventDate), "EEEE d 'de' MMMM yyyy", { locale: es })}
-                  {event.eventTime && ` · ${event.eventTime} hs`}
+                  {event.eventTime && ` · ${event.eventTime.substring(0, 5)} hs`}
                 </p>
               </div>
             </div>
@@ -167,18 +158,20 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
 
           {event.venue && (
             <div className="flex items-start gap-3 p-5">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-500" />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
               <div>
-                <p className="text-xs text-zinc-500">Lugar</p>
-                <p className="mt-0.5 text-sm font-medium text-white">{event.venue}</p>
+                <p className="text-xs text-zinc-400 dark:text-zinc-500">Lugar</p>
+                <p className="mt-0.5 text-sm font-medium text-zinc-900 dark:text-white">
+                  {event.venue}
+                </p>
               </div>
             </div>
           )}
 
           {event.serviceDescription && (
             <div className="p-5">
-              <p className="text-xs text-zinc-500">Servicio contratado</p>
-              <p className="mt-1.5 text-sm text-zinc-300 leading-relaxed">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">Servicio contratado</p>
+              <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                 {event.serviceDescription}
               </p>
             </div>
@@ -186,8 +179,8 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
 
           {event.showPrice && event.price && (
             <div className="p-5">
-              <p className="text-xs text-zinc-500">Inversión</p>
-              <p className="mt-0.5 text-xl font-bold text-white">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">Inversión</p>
+              <p className="mt-0.5 text-xl font-bold text-zinc-900 dark:text-white">
                 {event.currency} {Number(event.price).toLocaleString('es-AR')}
               </p>
             </div>
@@ -195,24 +188,30 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
         </div>
 
         {/* Equipo */}
-        {event.members.length > 0 && (
+        {members.length > 0 && (
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
               Tu equipo
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {event.members.map((member) => (
+              {members.map((member) => (
                 <div
                   key={member.name}
-                  className="flex items-center gap-4 rounded-xl border border-white/5 bg-white/[0.02] p-4"
+                  className="flex items-center gap-4 rounded-xl border border-zinc-100 dark:border-white/5 bg-white dark:bg-white/[0.02] p-4"
                 >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-600/20 text-sm font-bold text-violet-400">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-600/20 text-sm font-bold text-violet-600 dark:text-violet-400">
                     {member.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">{member.name}</p>
-                    {member.role && <p className="text-xs text-violet-400">{member.role}</p>}
-                    {member.bio && <p className="text-xs text-zinc-500">{member.bio}</p>}
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      {member.name}
+                    </p>
+                    {member.role && (
+                      <p className="text-xs text-violet-600 dark:text-violet-400">{member.role}</p>
+                    )}
+                    {member.bio && (
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">{member.bio}</p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -220,14 +219,16 @@ export default async function EventPublicPage({ params }: EventPublicPageProps) 
           </div>
         )}
 
-        {/* Portal de cliente — login + mensajes en tiempo real */}
+        {/* Portal de cliente */}
         <ClientPortal
-          eventId={token}
+          eventId={event.id}
           clientEmail={event.clientEmail}
-          initialComments={MOCK_COMMENTS}
+          initialComments={initialComments}
         />
 
-        <p className="text-center text-xs text-zinc-700">{agencyName} · Powered by AURA Admin</p>
+        <p className="text-center text-xs text-zinc-300 dark:text-zinc-700">
+          {agencyName} · Powered by AURA Admin
+        </p>
       </main>
     </div>
   )

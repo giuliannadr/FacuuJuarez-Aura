@@ -6,6 +6,7 @@ export interface SessionProfile {
   email: string
   role: Role
   avatar_url: string | null
+  isCoordinator: boolean
 }
 
 export interface NavItem {

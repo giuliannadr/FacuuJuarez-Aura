@@ -1,36 +1,11 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
+import { eq } from 'drizzle-orm'
+import { db, events, eventMembers, profiles } from '@aura/db'
 import { getSession } from '@/lib/supabase'
 import { can } from '@/lib/permissions'
 import { EventForm } from '@/components/features/events/EventForm'
-
-const MOCK_MEMBERS = [
-  { id: 'm1', name: 'Facundo', bio: 'DJ y fundador' },
-  { id: 'm2', name: 'Valentina', bio: 'Coordinación' },
-  { id: 'm3', name: 'Matías', bio: 'Producción' },
-]
-
-// Mock — se reemplaza con db.query.events.findFirst({ where: eq(events.id, id) })
-const MOCK_EVENT = {
-  id: 'e1',
-  context: 'aura' as const,
-  title: 'Boda García — Dic 2025',
-  clientName: 'Romina García',
-  clientEmail: 'romina@gmail.com',
-  serviceDescription: 'DJ set de 6 horas + iluminación',
-  price: '180000',
-  currency: 'ARS' as const,
-  showPrice: true,
-  eventDate: '2025-12-06',
-  eventTime: '21:00',
-  venue: 'Estancia La Paz, Cañuelas',
-  status: 'confirmed' as const,
-  shareToken: 'tok_e1_demo',
-  memberIds: ['m1', 'm2'],
-  memberRoles: { m1: 'DJ Principal', m2: 'Coordinación' },
-  notes: 'Rider técnico: 2 parlantes QSC K12.2, mesa Pioneer CDJ-3000.',
-}
 
 interface EventDetailPageProps {
   params: Promise<{ id: string }>
@@ -43,9 +18,29 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const { id } = await params
 
-  // TODO: buscar en DB
-  const event = id === MOCK_EVENT.id ? MOCK_EVENT : null
+  // ── Obtener evento ──────────────────────────────────────────────────────────
+  const [event] = await db.select().from(events).where(eq(events.id, id)).limit(1)
+
   if (!event) notFound()
+
+  // ── Miembros asignados a este evento ───────────────────────────────────────
+  const assignedMembers = await db
+    .select({
+      memberId: eventMembers.memberId,
+      memberRole: eventMembers.memberRole,
+    })
+    .from(eventMembers)
+    .where(eq(eventMembers.eventId, id))
+
+  const memberIds = assignedMembers.map((m) => m.memberId)
+  const memberRoles = Object.fromEntries(
+    assignedMembers.map((m) => [m.memberId, m.memberRole ?? ''])
+  )
+
+  // ── Todos los perfiles disponibles para el selector ───────────────────────
+  const allMembers = await db
+    .select({ id: profiles.id, name: profiles.name, bio: profiles.bio })
+    .from(profiles)
 
   const publicUrl = `/event/${event.shareToken}`
 
@@ -53,13 +48,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">{event.title}</h2>
-          <p className="mt-1 text-sm text-zinc-400">Editá los detalles del evento.</p>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{event.title}</h2>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Editá los detalles del evento.
+          </p>
         </div>
         <Link
           href={publicUrl}
           target="_blank"
-          className="flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-white/20 hover:text-white"
+          className="flex items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 px-3 py-1.5 text-xs text-zinc-500 dark:text-zinc-400 transition-colors hover:border-zinc-300 dark:hover:border-white/20 hover:text-zinc-900 dark:hover:text-white"
         >
           <ExternalLink className="h-3.5 w-3.5" />
           Ver link del cliente
@@ -68,7 +65,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
       <EventForm
         role={session.profile.role}
-        members={MOCK_MEMBERS}
+        members={allMembers}
         eventId={event.id}
         defaultValues={{
           context: event.context,
@@ -77,14 +74,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           clientEmail: event.clientEmail,
           serviceDescription: event.serviceDescription ?? undefined,
           price: event.price ?? undefined,
-          currency: event.currency,
+          currency: (event.currency as 'ARS' | 'USD') ?? 'ARS',
           showPrice: event.showPrice,
           eventDate: event.eventDate ?? undefined,
-          eventTime: event.eventTime ?? undefined,
+          eventTime: event.eventTime ? event.eventTime.substring(0, 5) : undefined,
           venue: event.venue ?? undefined,
           status: event.status,
-          memberIds: event.memberIds,
-          memberRoles: event.memberRoles,
+          memberIds,
+          memberRoles,
           notes: event.notes ?? undefined,
         }}
       />

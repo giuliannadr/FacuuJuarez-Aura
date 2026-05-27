@@ -1,91 +1,87 @@
+import { eq, and, inArray } from 'drizzle-orm'
+import { db, profiles, contentBlocks } from '@aura/db'
+import { buildAvailableSlots } from '@/lib/slotUtils'
 import { BookingFlow } from './BookingFlow'
 
-// Mock data — se reemplaza por query Drizzle cuando esté la DB
-// const members = await db.query.profiles.findMany({
-//   where: inArray(profiles.role, ['facundo', 'aura_admin', 'aura_member']),
-//   columns: { id: true, name: true, role: true, bio: true, avatarUrl: true },
-// })
-const MOCK_MEMBERS = [
-  {
-    id: 'f1a2b3c4-0000-0000-0000-000000000001',
-    name: 'Facundo',
-    role: 'facundo' as const,
-    bio: 'DJ y fundador',
-    avatarUrl: null,
-  },
-  {
-    id: 'f1a2b3c4-0000-0000-0000-000000000002',
-    name: 'Valentina',
-    role: 'aura_member' as const,
-    bio: 'Producción',
-    avatarUrl: null,
-  },
-  {
-    id: 'f1a2b3c4-0000-0000-0000-000000000003',
-    name: 'Matías',
-    role: 'aura_member' as const,
-    bio: 'Management',
-    avatarUrl: null,
-  },
-]
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
-// Mock availability — se reemplaza por query real
-const MOCK_SLOTS = [
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000001',
-    date: getTodayPlus(1),
-    startTime: '10:00',
-    endTime: '11:00',
-  },
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000001',
-    date: getTodayPlus(1),
-    startTime: '15:00',
-    endTime: '16:00',
-  },
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000002',
-    date: getTodayPlus(1),
-    startTime: '10:00',
-    endTime: '11:00',
-  },
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000002',
-    date: getTodayPlus(2),
-    startTime: '14:00',
-    endTime: '15:00',
-  },
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000003',
-    date: getTodayPlus(1),
-    startTime: '10:00',
-    endTime: '11:00',
-  },
-  {
-    memberId: 'f1a2b3c4-0000-0000-0000-000000000003',
-    date: getTodayPlus(3),
-    startTime: '09:00',
-    endTime: '10:00',
-  },
-]
+export default async function BookPage() {
+  // ── Coordinador ─────────────────────────────────────────────────────────────
+  let coordinatorRows = await db
+    .select({ id: profiles.id, name: profiles.name })
+    .from(profiles)
+    .where(eq(profiles.isCoordinator, true))
+    .limit(1)
 
-function getTodayPlus(days: number) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
-}
+  if (coordinatorRows.length === 0) {
+    coordinatorRows = await db
+      .select({ id: profiles.id, name: profiles.name })
+      .from(profiles)
+      .where(inArray(profiles.role, ['facundo', 'aura_admin']))
+      .limit(1)
+  }
 
-export default function BookPage() {
+  if (coordinatorRows.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Reservá una reunión</h1>
+        </div>
+        <div className="rounded-xl border border-dashed border-zinc-200 dark:border-white/10 p-8 text-center">
+          <p className="text-sm text-zinc-400 dark:text-zinc-600">
+            No hay turnos disponibles en este momento. Volvé pronto.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const coordinator = coordinatorRows[0]
+
+  // ── Nombre de contacto configurable ─────────────────────────────────────────
+  const [contactBlock] = await db
+    .select({ value: contentBlocks.value })
+    .from(contentBlocks)
+    .where(
+      and(
+        eq(contentBlocks.site, 'aura'),
+        eq(contentBlocks.section, 'booking'),
+        eq(contentBlocks.key, 'contact_name')
+      )
+    )
+    .limit(1)
+
+  const contactName = contactBlock?.value?.trim() || null
+
+  // ── Miembros del equipo para selección de DJ ─────────────────────────────────
+  const djMembers = await db
+    .select({ id: profiles.id, name: profiles.name })
+    .from(profiles)
+    .where(inArray(profiles.role, ['facundo', 'aura_admin', 'aura_member']))
+    .orderBy(profiles.name)
+
+  // ── Slots disponibles (con locking y timezone ART) ───────────────────────────
+  const availableSlots = await buildAvailableSlots(coordinator.id, 'aura')
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-white">Reservá una reunión</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          Elegí con quién querés reunirte, un horario disponible y completá tus datos.
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Reservá una reunión</h1>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Contanos sobre tu evento, elegí fecha y horario y te confirmamos a la brevedad. Cada
+          reunión dura 45 minutos.
         </p>
       </div>
 
-      <BookingFlow members={MOCK_MEMBERS} availableSlots={MOCK_SLOTS} />
+      <BookingFlow
+        coordinatorId={coordinator.id}
+        contactName={contactName}
+        availableSlots={availableSlots}
+        context="aura"
+        showDjPreference={true}
+        djMembers={djMembers}
+        brandName="AURA"
+      />
     </div>
   )
 }

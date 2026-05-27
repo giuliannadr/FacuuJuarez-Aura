@@ -1,6 +1,8 @@
 'use server'
 
 import { z } from 'zod'
+import { eq } from 'drizzle-orm'
+import { db, events, eventComments, profiles } from '@aura/db'
 import { createSupabaseServerClient } from '@/lib/supabase'
 
 export type CommentResult = { success: true } | { success: false; error: string }
@@ -24,45 +26,32 @@ export async function addComment(raw: unknown): Promise<CommentResult> {
   if (!user) return { success: false, error: 'Debés iniciar sesión para comentar' }
 
   // Determinar si es del equipo (tiene perfil en la tabla profiles)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, name')
-    .eq('id', user.id)
-    .single()
+  const [profile] = await db
+    .select({ id: profiles.id, name: profiles.name })
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1)
 
   const isFromTeam = !!profile
   const authorName = profile?.name ?? user.email ?? 'Cliente'
 
-  // TODO: reemplazar con Drizzle cuando esté la DB:
-  //
-  // import { db } from '@/../../packages/db/client'
-  // import { events, eventComments } from '@/../../packages/db/schema'
-  // import { eq } from 'drizzle-orm'
-  //
-  // 1. Verificar que el evento existe y que el usuario tiene acceso
-  //    (o es del equipo, o su email coincide con el clientEmail del evento)
-  // const event = await db.query.events.findFirst({
-  //   where: eq(events.id, parsed.data.eventId),
-  // })
-  // if (!event) return { success: false, error: 'Evento no encontrado' }
-  //
-  // const hasAccess = isFromTeam || event.clientEmail === user.email
-  // if (!hasAccess) {
-  //   return { success: false, error: 'Tu cuenta no tiene acceso a este evento' }
-  // }
-  //
-  // 2. Insertar comentario
-  // await db.insert(eventComments).values({
-  //   eventId: parsed.data.eventId,
-  //   authorEmail: user.email!,
-  //   authorName,
-  //   body: parsed.data.body,
-  //   isFromTeam,
-  // })
+  // Verificar que el evento existe y que el usuario tiene acceso
+  const [event] = await db
+    .select({ id: events.id, clientEmail: events.clientEmail })
+    .from(events)
+    .where(eq(events.id, parsed.data.eventId))
+    .limit(1)
 
-  console.log('[addComment] mock insert:', {
+  if (!event) return { success: false, error: 'Evento no encontrado' }
+
+  const hasAccess = isFromTeam || event.clientEmail === user.email
+  if (!hasAccess) {
+    return { success: false, error: 'Tu cuenta no tiene acceso a este evento' }
+  }
+
+  await db.insert(eventComments).values({
     eventId: parsed.data.eventId,
-    authorEmail: user.email,
+    authorEmail: user.email!,
     authorName,
     body: parsed.data.body,
     isFromTeam,

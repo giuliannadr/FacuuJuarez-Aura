@@ -21,13 +21,13 @@ export interface SlotDisplay {
 const CONTEXT_STYLE = {
   aura: {
     bg: 'bg-sky-500/10 border-sky-500/20',
-    text: 'text-sky-400',
+    text: 'text-sky-600 dark:text-sky-400',
     dot: 'bg-sky-400',
     label: 'AURA',
   },
   facundo_solo: {
     bg: 'bg-violet-500/10 border-violet-500/20',
-    text: 'text-violet-400',
+    text: 'text-violet-600 dark:text-violet-400',
     dot: 'bg-violet-400',
     label: 'Personal',
   },
@@ -70,16 +70,18 @@ export function AvailabilityGrid({ initialSlots, role }: AvailabilityGridProps) 
       <div className="flex items-center justify-between">
         <button
           onClick={() => setWeekStart((w) => subWeeks(w, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
 
-        <span className="text-sm font-medium capitalize text-zinc-300">{weekLabel}</span>
+        <span className="text-sm font-medium capitalize text-zinc-600 dark:text-zinc-300">
+          {weekLabel}
+        </span>
 
         <button
           onClick={() => setWeekStart((w) => addWeeks(w, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-white/10 text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -111,11 +113,13 @@ export function AvailabilityGrid({ initialSlots, role }: AvailabilityGridProps) 
             <div key={dateStr} className="flex flex-col gap-2">
               {/* Day header */}
               <div className="flex flex-col items-center gap-1">
-                <span className="text-xs capitalize text-zinc-500">{dayName}</span>
+                <span className="text-xs capitalize text-zinc-400 dark:text-zinc-500">
+                  {dayName}
+                </span>
                 <span
                   className={cn(
                     'flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold',
-                    today ? 'bg-violet-600 text-white' : 'text-zinc-300'
+                    today ? 'bg-violet-600 text-white' : 'text-zinc-600 dark:text-zinc-300'
                   )}
                 >
                   {dayNum}
@@ -135,12 +139,14 @@ export function AvailabilityGrid({ initialSlots, role }: AvailabilityGridProps) 
                         {slot.startTime}–{slot.endTime}
                       </p>
                       {role === 'facundo' && (
-                        <p className="text-[10px] text-zinc-500">{style.label}</p>
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                          {style.label}
+                        </p>
                       )}
                       <button
                         onClick={() => handleDelete(slot.id)}
                         disabled={isPending}
-                        className="absolute right-1 top-1 hidden rounded p-0.5 text-zinc-600 transition-colors hover:text-red-400 group-hover:flex"
+                        className="absolute right-1 top-1 hidden rounded p-0.5 text-zinc-400 dark:text-zinc-600 transition-colors hover:text-red-500 dark:hover:text-red-400 group-hover:flex"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Button } from '@/components/ui/button'
@@ -35,7 +36,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-300" htmlFor="email">
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300" htmlFor="email">
           Email
         </label>
         <input
@@ -45,13 +46,13 @@ export function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+          className="w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
           placeholder="tu@email.com"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-zinc-300" htmlFor="password">
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300" htmlFor="password">
           Contraseña
         </label>
         <input
@@ -61,16 +62,29 @@ export function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+          className="w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
           placeholder="••••••••"
         />
       </div>
 
-      {error && <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="rounded-md bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          {error}
+        </p>
+      )}
 
       <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-500" disabled={loading}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Iniciar sesión'}
       </Button>
+
+      <div className="text-center">
+        <Link
+          href="/forgot-password"
+          className="text-xs text-zinc-400 dark:text-zinc-600 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
     </form>
   )
 }

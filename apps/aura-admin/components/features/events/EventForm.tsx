@@ -25,7 +25,7 @@ interface EventFormProps {
 }
 
 const inputClass =
-  'w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+  'w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
 
 function Field({
   label,
@@ -40,10 +40,10 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-zinc-400">{label}</label>
+      <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-zinc-600">{hint}</p>}
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {hint && <p className="text-[11px] text-zinc-400 dark:text-zinc-600">{hint}</p>}
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
     </div>
   )
 }
@@ -89,7 +89,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {/* ─── Sección 1: Básicos ─────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Información del evento
         </h3>
 
@@ -117,7 +117,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
                       {...register('context')}
                       className="peer sr-only"
                     />
-                    <span className="flex cursor-pointer items-center justify-center rounded-md border border-white/10 py-2 text-xs font-medium text-zinc-400 transition-colors peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-400 hover:border-white/20">
+                    <span className="flex cursor-pointer items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-colors peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-600 dark:peer-checked:text-violet-400 hover:border-zinc-300 dark:hover:border-white/20">
                       {opt.label}
                     </span>
                   </label>
@@ -127,7 +127,10 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
           )}
 
           <Field label="Estado" error={errors.status?.message}>
-            <select {...register('status')} className={cn(inputClass, '[color-scheme:dark]')}>
+            <select
+              {...register('status')}
+              className={cn(inputClass, '[color-scheme:light] dark:[color-scheme:dark]')}
+            >
               {EVENT_STATUSES.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -149,7 +152,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
 
       {/* ─── Sección 2: Cliente ─────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Datos del cliente
         </h3>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -173,7 +176,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
 
       {/* ─── Sección 3: Fecha, lugar y precio ──────────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Fecha, lugar y precio
         </h3>
 
@@ -182,14 +185,14 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
             <input
               type="date"
               {...register('eventDate')}
-              className={cn(inputClass, '[color-scheme:dark]')}
+              className={cn(inputClass, '[color-scheme:light] dark:[color-scheme:dark]')}
             />
           </Field>
           <Field label="Hora" error={errors.eventTime?.message}>
             <input
               type="time"
               {...register('eventTime')}
-              className={cn(inputClass, '[color-scheme:dark]')}
+              className={cn(inputClass, '[color-scheme:light] dark:[color-scheme:dark]')}
             />
           </Field>
           <Field label="Lugar / Venue" error={errors.venue?.message}>
@@ -206,7 +209,10 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
             <input {...register('price')} placeholder="150000" className={inputClass} />
           </Field>
           <Field label="Moneda">
-            <select {...register('currency')} className={cn(inputClass, '[color-scheme:dark]')}>
+            <select
+              {...register('currency')}
+              className={cn(inputClass, '[color-scheme:light] dark:[color-scheme:dark]')}
+            >
               <option value="ARS">ARS — Pesos</option>
               <option value="USD">USD — Dólares</option>
             </select>
@@ -217,12 +223,14 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
               <div
                 className={cn(
                   'flex h-5 w-5 items-center justify-center rounded border transition-colors',
-                  showPrice ? 'border-violet-500 bg-violet-500' : 'border-white/20 bg-white/5'
+                  showPrice
+                    ? 'border-violet-500 bg-violet-500'
+                    : 'border-zinc-300 dark:border-white/20 bg-white dark:bg-white/5'
                 )}
               >
                 {showPrice && <Check className="h-3 w-3 text-white" />}
               </div>
-              <span className="text-sm text-zinc-400">Sí, mostrar</span>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">Sí, mostrar</span>
             </label>
           </Field>
         </div>
@@ -230,10 +238,12 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
 
       {/* ─── Sección 4: Equipo ──────────────────────────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Equipo asignado *
         </h3>
-        {errors.memberIds && <p className="text-xs text-red-400">{errors.memberIds.message}</p>}
+        {errors.memberIds && (
+          <p className="text-xs text-red-500 dark:text-red-400">{errors.memberIds.message}</p>
+        )}
 
         <Controller
           control={control}
@@ -249,7 +259,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
                       'rounded-xl border p-4 transition-all',
                       selected
                         ? 'border-violet-500 bg-violet-500/10'
-                        : 'border-white/5 bg-white/[0.02]'
+                        : 'border-zinc-100 dark:border-white/5 bg-white dark:bg-white/[0.02]'
                     )}
                   >
                     <div className="flex items-center gap-3">
@@ -263,14 +273,20 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
                         }}
                         className={cn(
                           'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-                          selected ? 'border-violet-500 bg-violet-500' : 'border-white/20'
+                          selected
+                            ? 'border-violet-500 bg-violet-500'
+                            : 'border-zinc-300 dark:border-white/20'
                         )}
                       >
                         {selected && <Check className="h-3 w-3 text-white" />}
                       </button>
                       <div>
-                        <p className="text-sm font-medium text-white">{member.name}</p>
-                        {member.bio && <p className="text-xs text-zinc-500">{member.bio}</p>}
+                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                          {member.name}
+                        </p>
+                        {member.bio && (
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500">{member.bio}</p>
+                        )}
                       </div>
                     </div>
 
@@ -292,7 +308,7 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
 
       {/* ─── Sección 5: Notas internas ──────────────────────────────────── */}
       <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Notas internas
         </h3>
         <Field label="Notas (solo visibles para el equipo)">
@@ -306,12 +322,12 @@ export function EventForm({ role, members, defaultValues, eventId }: EventFormPr
       </section>
 
       {/* ─── Acciones ───────────────────────────────────────────────────── */}
-      <div className="flex gap-3 border-t border-white/5 pt-6">
+      <div className="flex gap-3 border-t border-zinc-100 dark:border-white/5 pt-6">
         <Button
           type="button"
           variant="outline"
           onClick={() => router.push('/events')}
-          className="border-white/10 text-zinc-400 hover:text-white"
+          className="border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
         >
           Cancelar
         </Button>

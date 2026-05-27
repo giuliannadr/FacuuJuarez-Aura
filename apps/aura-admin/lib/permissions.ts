@@ -12,7 +12,7 @@ export const ROLE_PERMISSIONS = {
   aura_admin: {
     canEditFacundoContent: false,
     canEditAuraContent: true,
-    canManageTeam: false,
+    canManageTeam: true,
     canViewAllBookings: true,
     canViewMergedCalendar: false,
     canManageEvents: true, // solo eventos de AURA
@@ -81,7 +81,7 @@ export const NAV_ITEMS = [
     label: 'Equipo',
     href: '/team',
     icon: 'Users',
-    roles: ['facundo'] as Role[],
+    roles: ['facundo', 'aura_admin'] as Role[],
   },
   {
     label: 'Configuración',

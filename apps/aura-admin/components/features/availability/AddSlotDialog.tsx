@@ -56,7 +56,7 @@ export function AddSlotDialog({ date, dateLabel, role }: AddSlotDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-white/10 py-1.5 text-xs text-zinc-600 transition-colors hover:border-white/20 hover:text-zinc-400">
+        <button className="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-zinc-200 dark:border-white/10 py-1.5 text-xs text-zinc-400 dark:text-zinc-600 transition-colors hover:border-zinc-300 dark:hover:border-white/20 hover:text-zinc-600 dark:hover:text-zinc-400">
           <Plus className="h-3 w-3" />
           Agregar
         </button>
@@ -74,7 +74,9 @@ export function AddSlotDialog({ date, dateLabel, role }: AddSlotDialogProps) {
           {/* Context — solo visible para Facundo */}
           {role === 'facundo' && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Contexto</label>
+              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Contexto
+              </label>
               <div className="flex gap-2">
                 {[
                   { value: 'aura', label: 'AURA' },
@@ -87,7 +89,7 @@ export function AddSlotDialog({ date, dateLabel, role }: AddSlotDialogProps) {
                       {...register('context')}
                       className="peer sr-only"
                     />
-                    <span className="flex cursor-pointer items-center justify-center rounded-md border border-white/10 py-2 text-xs font-medium text-zinc-400 transition-colors peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-400 hover:border-white/20">
+                    <span className="flex cursor-pointer items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 py-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-colors peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-600 dark:peer-checked:text-violet-400 hover:border-zinc-300 dark:hover:border-white/20">
                       {opt.label}
                     </span>
                   </label>
@@ -99,31 +101,39 @@ export function AddSlotDialog({ date, dateLabel, role }: AddSlotDialogProps) {
           {/* Horarios */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400" htmlFor="startTime">
+              <label
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+                htmlFor="startTime"
+              >
                 Desde
               </label>
               <input
                 id="startTime"
                 type="time"
                 {...register('startTime')}
-                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 [color-scheme:dark]"
+                className="w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 [color-scheme:light] dark:[color-scheme:dark]"
               />
               {errors.startTime && (
-                <p className="text-xs text-red-400">{errors.startTime.message}</p>
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.startTime.message}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400" htmlFor="endTime">
+              <label
+                className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
+                htmlFor="endTime"
+              >
                 Hasta
               </label>
               <input
                 id="endTime"
                 type="time"
                 {...register('endTime')}
-                className="w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 [color-scheme:dark]"
+                className="w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 [color-scheme:light] dark:[color-scheme:dark]"
               />
-              {errors.endTime && <p className="text-xs text-red-400">{errors.endTime.message}</p>}
+              {errors.endTime && (
+                <p className="text-xs text-red-500 dark:text-red-400">{errors.endTime.message}</p>
+              )}
             </div>
           </div>
 

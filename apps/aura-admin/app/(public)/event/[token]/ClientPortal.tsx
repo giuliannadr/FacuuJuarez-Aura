@@ -24,7 +24,10 @@ interface ClientPortalProps {
   initialComments: EventCommentData[]
 }
 
-// ─── Auth form (login / signup) ───────────────────────────────────────────────
+const inputClass =
+  'h-10 w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'
+
+// ─── Auth form ────────────────────────────────────────────────────────────────
 function AuthForm({ clientEmail }: { clientEmail: string }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState(clientEmail)
@@ -38,7 +41,6 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
     startTransition(async () => {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -62,8 +64,10 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
   if (signedUp) {
     return (
       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 text-center">
-        <p className="text-sm font-medium text-emerald-400">¡Cuenta creada!</p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+          ¡Cuenta creada!
+        </p>
+        <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
           Revisá tu email para confirmar la cuenta y luego iniciá sesión.
         </p>
         <button
@@ -71,7 +75,7 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
             setMode('login')
             setSignedUp(false)
           }}
-          className="mt-3 text-xs text-violet-400 hover:text-violet-300"
+          className="mt-3 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500 dark:hover:text-violet-300"
         >
           Ir al login
         </button>
@@ -92,8 +96,8 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
             className={cn(
               'flex-1 rounded-lg border py-2 text-xs font-medium transition-colors',
               mode === m
-                ? 'border-violet-500 bg-violet-500/10 text-violet-400'
-                : 'border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-300'
+                ? 'border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                : 'border-zinc-200 dark:border-white/10 text-zinc-400 dark:text-zinc-500 hover:border-zinc-300 dark:hover:border-white/20 hover:text-zinc-700 dark:hover:text-zinc-300'
             )}
           >
             {m === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
@@ -129,7 +133,7 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
           minLength={6}
         />
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
 
         <button
           type="submit"
@@ -147,14 +151,14 @@ function AuthForm({ clientEmail }: { clientEmail: string }) {
       </form>
 
       {mode === 'login' && (
-        <p className="text-center text-xs text-zinc-600">
+        <p className="text-center text-xs text-zinc-400 dark:text-zinc-600">
           ¿Primera vez?{' '}
           <button
             onClick={() => {
               setMode('signup')
               setError(null)
             }}
-            className="text-violet-400 hover:text-violet-300"
+            className="text-violet-600 dark:text-violet-400 hover:text-violet-500 dark:hover:text-violet-300"
           >
             Creá tu cuenta
           </button>
@@ -212,9 +216,8 @@ function CommentsSection({
 
   return (
     <div className="space-y-4">
-      {/* Lista de comentarios */}
       {comments.length === 0 ? (
-        <p className="py-6 text-center text-sm text-zinc-600">
+        <p className="py-6 text-center text-sm text-zinc-400 dark:text-zinc-600">
           Aún no hay mensajes. ¡Sé el primero en escribir!
         </p>
       ) : (
@@ -226,29 +229,32 @@ function CommentsSection({
                 'rounded-xl border p-4',
                 c.isFromTeam
                   ? 'border-violet-500/20 bg-violet-500/5'
-                  : 'border-white/5 bg-white/[0.02]'
+                  : 'border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02]'
               )}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-white">{c.authorName}</span>
+                <span className="text-xs font-medium text-zinc-900 dark:text-white">
+                  {c.authorName}
+                </span>
                 {c.isFromTeam && (
-                  <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-400">
+                  <span className="flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400">
                     <ShieldCheck className="h-2.5 w-2.5" />
                     Equipo
                   </span>
                 )}
-                <span className="ml-auto text-[10px] text-zinc-600">
+                <span className="ml-auto text-[10px] text-zinc-400 dark:text-zinc-600">
                   {format(parseISO(c.createdAt), 'd MMM · HH:mm', { locale: es })}
                 </span>
               </div>
-              <p className="mt-1.5 text-sm leading-relaxed text-zinc-300">{c.body}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                {c.body}
+              </p>
             </div>
           ))}
           <div ref={bottomRef} />
         </div>
       )}
 
-      {/* Formulario */}
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           value={body}
@@ -264,7 +270,7 @@ function CommentsSection({
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </form>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   )
 }
@@ -276,24 +282,20 @@ export function ClientPortal({ eventId, clientEmail, initialComments }: ClientPo
   const [comments, setComments] = useState<EventCommentData[]>(initialComments)
   const supabase = createSupabaseBrowserClient()
 
-  // Auth state
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setAuthLoading(false)
     })
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setAuthLoading(false)
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
-  // Supabase Realtime — escucha nuevos comentarios en tiempo real
   useEffect(() => {
     const channel = supabase
       .channel(`event-comments:${eventId}`)
@@ -308,14 +310,12 @@ export function ClientPortal({ eventId, clientEmail, initialComments }: ClientPo
         (payload) => {
           const newComment = payload.new as EventCommentData
           setComments((prev) => {
-            // evitar duplicar el optimistic comment propio
             if (prev.some((c) => c.id === newComment.id)) return prev
             return [...prev, newComment]
           })
         }
       )
       .subscribe()
-
     return () => {
       supabase.removeChannel(channel)
     }
@@ -326,35 +326,35 @@ export function ClientPortal({ eventId, clientEmail, initialComments }: ClientPo
   const isAuthorized = userEmail === clientEmail
 
   return (
-    <section className="rounded-xl border border-white/5 bg-white/[0.02] p-6">
+    <section className="rounded-xl border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/[0.02] p-6">
       <div className="mb-5 flex items-center gap-2">
-        <MessageCircle className="h-4 w-4 text-violet-400" />
-        <h2 className="text-sm font-semibold text-white">Mensajes del evento</h2>
+        <MessageCircle className="h-4 w-4 text-violet-500 dark:text-violet-400" />
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Mensajes del evento</h2>
       </div>
 
       {authLoading ? (
         <div className="flex justify-center py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-zinc-600" />
+          <Loader2 className="h-5 w-5 animate-spin text-zinc-300 dark:text-zinc-600" />
         </div>
       ) : !session ? (
         <div className="space-y-4">
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Iniciá sesión con el email que usaste al agendar para dejar mensajes al equipo.
           </p>
           <AuthForm clientEmail={clientEmail} />
         </div>
       ) : !isAuthorized ? (
         <div className="space-y-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
-          <p className="text-sm text-amber-400">
+          <p className="text-sm text-amber-600 dark:text-amber-400">
             La cuenta <span className="font-medium">{userEmail}</span> no tiene acceso a este
             evento.
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-400 dark:text-zinc-500">
             Cerrá sesión e ingresá con el email que usaste al agendar la reunión.
           </p>
           <button
             onClick={() => supabase.auth.signOut()}
-            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white"
+            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-white"
           >
             <LogOut className="h-3.5 w-3.5" />
             Cerrar sesión
@@ -363,12 +363,12 @@ export function ClientPortal({ eventId, clientEmail, initialComments }: ClientPo
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-500">
-              Conectado como <span className="text-zinc-300">{userName}</span>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">
+              Conectado como <span className="text-zinc-700 dark:text-zinc-300">{userName}</span>
             </p>
             <button
               onClick={() => supabase.auth.signOut()}
-              className="flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-400"
+              className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-400"
             >
               <LogOut className="h-3 w-3" />
               Salir
@@ -386,6 +386,3 @@ export function ClientPortal({ eventId, clientEmail, initialComments }: ClientPo
     </section>
   )
 }
-
-const inputClass =
-  'h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500'

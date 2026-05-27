@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { eq } from 'drizzle-orm'
+import { db, profiles } from '@aura/db'
 import type { Role } from './permissions'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -18,31 +20,49 @@ export async function createSupabaseServerClient() {
   })
 }
 
-// Obtiene la sesión y el rol del usuario desde el server
+/**
+ * Obtiene el usuario autenticado + su perfil desde el server.
+ *
+ * - Usa `getUser()` en lugar de `getSession()` para validar el JWT
+ *   contra el servidor de Supabase Auth (no solo desde cookies).
+ * - Usa Drizzle (conexión directa a postgres) para leer el perfil,
+ *   lo que bypasea RLS y no depende del cliente Supabase REST.
+ */
 export async function getSession() {
   const supabase = await createSupabaseServerClient()
+
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
 
-  if (!session) return null
+  if (error || !user) return null
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, name, email, role, avatar_url')
-    .eq('id', session.user.id)
-    .single()
+  // Drizzle bypasea RLS → funciona aunque la tabla profiles tenga RLS sin políticas
+  const [profile] = await db
+    .select({
+      id: profiles.id,
+      name: profiles.name,
+      email: profiles.email,
+      role: profiles.role,
+      avatarUrl: profiles.avatarUrl,
+      isCoordinator: profiles.isCoordinator,
+    })
+    .from(profiles)
+    .where(eq(profiles.id, user.id))
+    .limit(1)
 
-  return profile
-    ? {
-        ...session,
-        profile: profile as {
-          id: string
-          name: string
-          email: string
-          role: Role
-          avatar_url: string | null
-        },
-      }
-    : null
+  if (!profile) return null
+
+  return {
+    user,
+    profile: {
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      role: profile.role as Role,
+      avatar_url: profile.avatarUrl,
+      isCoordinator: profile.isCoordinator,
+    },
+  }
 }
