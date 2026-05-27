@@ -179,3 +179,34 @@ body {
     transform: scaleY(0.18);
   }
 }
+
+/* ── Page loader ── */
+@keyframes loaderBarIn {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes loaderTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) skewY(1deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) skewY(0deg);
+  }
+}
+@keyframes loaderProgress {
+  0% {
+    transform: scaleX(0);
+  }
+  65% {
+    transform: scaleX(0.78);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
+import PageLoader from '@/components/PageLoader'
 import './globals.css'
 
 const geist = Geist({
@@ -21,7 +22,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-white text-zinc-900">{children}</body>
+      <body className="min-h-full bg-white text-zinc-900">
+        <PageLoader />
+        {children}
+      </body>
     </html>
   )
 }
