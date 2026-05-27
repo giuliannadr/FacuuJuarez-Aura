@@ -47,10 +47,10 @@ export default function PageLoader() {
 
   return (
     <div
-      className="fixed inset-0 z-[9999] bg-[#080808] flex flex-col items-center justify-center gap-5"
+      className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col items-center justify-center gap-6"
       style={{ transition: 'opacity 0.55s ease', opacity: exiting ? 0 : 1 }}
     >
-      {/* EQ bars */}
+      {/* EQ bars — red, matching hero equalizer */}
       <div
         className="flex items-end gap-[3px]"
         style={{ animation: 'loaderTextIn 0.35s 0.05s ease-out both' }}
@@ -58,7 +58,7 @@ export default function PageLoader() {
         {BARS.map(([h, delay, anim, speed], i) => (
           <div
             key={i}
-            className="w-[8px] rounded-t-sm origin-bottom bg-white"
+            className="w-[8px] rounded-t-sm origin-bottom bg-red-500"
             style={{
               height: h,
               animation: [
@@ -70,17 +70,49 @@ export default function PageLoader() {
         ))}
       </div>
 
-      {/* Name */}
-      <p
-        className="text-white tracking-[0.3em] uppercase"
-        style={{
-          fontFamily: BEBES,
-          fontSize: 13,
-          animation: 'loaderTextIn 0.4s 0.45s ease-out both',
-        }}
+      {/* Name — same treatment as the hero */}
+      <div
+        className="flex flex-col items-center leading-none"
+        style={{ animation: 'loaderTextIn 0.4s 0.45s ease-out both' }}
       >
-        FACUU JUAREZ
-      </p>
+        {/* FACUU — outlined, like in hero */}
+        <span
+          className="text-transparent tracking-[0.06em]"
+          style={{
+            fontFamily: BEBES,
+            fontSize: 'clamp(32px, 6vw, 52px)',
+            WebkitTextStroke: '1.5px rgba(255,255,255,0.85)',
+          }}
+        >
+          FACUU
+        </span>
+
+        {/* JUAREZ — solid red, like in hero */}
+        <span
+          className="text-red-500 tracking-[0.06em]"
+          style={{
+            fontFamily: BEBES,
+            fontSize: 'clamp(32px, 6vw, 52px)',
+          }}
+        >
+          JUAREZ
+        </span>
+      </div>
+
+      {/* Editorial tag — same style as hero subtitle */}
+      <div
+        className="flex items-center gap-2.5"
+        style={{ animation: 'loaderTextIn 0.4s 0.65s ease-out both' }}
+      >
+        <div className="w-4 h-px bg-red-500" />
+        <span
+          className="text-[#a1a1aa] tracking-[0.3em] uppercase"
+          style={{ fontFamily: BEBES, fontSize: 9 }}
+        >
+          DJ · Tucumán · Argentina
+        </span>
+        <div className="w-4 h-px bg-red-500" />
+      </div>
 
       {/* Progress line */}
       <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#111]">
