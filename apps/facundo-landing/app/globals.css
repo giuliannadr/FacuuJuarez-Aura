@@ -63,6 +63,9 @@ body {
   .hero-reservar {
     display: none !important;
   }
+  .hero-eq {
+    display: none !important;
+  }
 
   /* Echo images: efecto solo funciona en desktop */
   .hero-img-echo1,
@@ -71,39 +74,35 @@ body {
     display: none !important;
   }
 
-  /* Imagen principal: empuja a Facuu hacia la derecha, texto queda libre a la izquierda */
+  /* Imagen principal: Facuu visible en la parte superior-derecha */
   .hero-img-main {
     transform: none !important;
-    object-position: 22% 20% !important;
+    object-position: 62% 8% !important;
   }
 
-  /* Hero col: apilado compacto sin el gap gigante del justify-between */
+  /* Hero col: anclado abajo, ancho completo, apilado hacia arriba */
   .hero-col {
-    left: 16px !important;
-    top: 6% !important;
+    left: 5% !important;
+    right: 5% !important;
+    top: auto !important;
+    bottom: 68px !important;
     height: auto !important;
     justify-content: flex-start !important;
-    gap: 20px !important;
+    gap: 18px !important;
   }
 
   .hero-name {
-    font-size: clamp(62px, 17vw, 80px) !important;
+    font-size: clamp(68px, 18vw, 86px) !important;
     line-height: 0.88 !important;
   }
 
   .hero-sep-inner {
-    max-width: 68vw !important;
+    max-width: 70vw !important;
   }
 
   .hero-stats {
-    gap: 12px !important;
-    margin-bottom: 18px !important;
-  }
-
-  /* Equalizer: esquina inferior derecha, por debajo del marquee */
-  .hero-eq {
-    right: 16px !important;
-    bottom: 54px !important;
+    gap: 14px !important;
+    margin-bottom: 16px !important;
   }
 
   .cta-btn-label {

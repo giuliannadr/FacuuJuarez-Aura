@@ -139,6 +139,16 @@ export default function Home() {
           style={{ objectPosition: '50% 26%', filter: 'grayscale(1) contrast(1.05)' }}
         />
 
+        {/* Mobile: gradient inferior para legibilidad del texto sobre la foto */}
+        <div
+          aria-hidden
+          className="absolute inset-0 z-[5] md:hidden pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(to top, #ecedee 18%, rgba(236,237,238,0.92) 38%, rgba(236,237,238,0.4) 58%, transparent 78%)',
+          }}
+        />
+
         <div aria-hidden className="absolute inset-0 z-[8] pointer-events-none overflow-hidden">
           <div
             className="absolute left-0 right-0 h-px"
