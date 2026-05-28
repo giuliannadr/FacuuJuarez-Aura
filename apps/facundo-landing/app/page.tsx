@@ -536,10 +536,38 @@ export default function Home() {
           }
 
           @media (max-width: 767px) {
-            .fd-date-col { min-width: 52px; padding-right: 12px; }
-            .fd-city { font-size: clamp(20px,5.5vw,36px); -webkit-text-stroke-width: 0.7px; }
-            .fd-meta-col { min-width: 46px; padding-left: 10px; }
-            .fd-event { font-size: 5px; letter-spacing: 0.1em; }
+            .fd-row { min-height: 64px; }
+
+            .fd-date-col {
+              width: 54px;
+              min-width: 54px;
+              padding: 0 10px 0 4%;
+            }
+            .fd-day { font-size: 28px; }
+            .fd-month { font-size: 7px; }
+
+            .fd-city-col { padding: 0 8px; overflow: hidden; }
+            .fd-city {
+              font-size: clamp(15px,4.5vw,24px);
+              color: rgba(255,255,255,0.5);
+              -webkit-text-stroke: none;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .fd-row:hover .fd-city { color: rgba(255,255,255,0.88); }
+
+            .fd-meta-col {
+              width: 82px;
+              min-width: 82px;
+              padding: 0 4% 0 8px;
+            }
+            .fd-event {
+              font-size: 7px;
+              letter-spacing: 0.08em;
+              color: rgba(255,255,255,0.35);
+            }
+            .fd-idx { font-size: 8px; color: rgba(255,255,255,0.18); }
           }
         `}</style>
 
