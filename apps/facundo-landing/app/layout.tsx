@@ -9,9 +9,9 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
-  title: 'Facuu Juarez — DJ & Productor | Buenos Aires',
+  title: 'Facuu Juarez — DJ & Productor | Tucumán',
   description:
-    'DJ y productor musical con más de 8 años de experiencia en bodas, fiestas y eventos corporativos en Buenos Aires. Reservá una reunión.',
+    'DJ y productor musical con más de 8 años de experiencia en bodas, fiestas y eventos corporativos en el NOA. Reservá una reunión.',
   openGraph: {
     title: 'Facuu Juarez — DJ & Productor',
     description: 'Música para cada momento. Reservá una reunión.',
