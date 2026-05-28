@@ -67,42 +67,44 @@ body {
     display: none !important;
   }
 
-  /* Echo images: efecto solo funciona en desktop */
+  /* Echo images: solo funcionan en desktop */
   .hero-img-echo1,
   .hero-img-echo2,
   .hero-img-echo3 {
     display: none !important;
   }
 
-  /* Imagen principal: Facuu visible en la parte superior-derecha */
+  /* Foto: Facuu corrido a la derecha, área izquierda libre para el texto */
   .hero-img-main {
     transform: none !important;
-    object-position: 62% 8% !important;
+    object-position: 72% 8% !important;
   }
 
-  /* Hero col: anclado abajo, ancho completo, apilado hacia arriba */
+  /* Columna: mismo concepto que desktop (nombre arriba, stats abajo)
+     pero con ancho acotado para que no se solape con la foto */
   .hero-col {
-    left: 5% !important;
-    right: 5% !important;
-    top: auto !important;
-    bottom: 68px !important;
-    height: auto !important;
-    justify-content: flex-start !important;
-    gap: 18px !important;
+    left: 4% !important;
+    right: 4% !important;
+    top: 7% !important;
+    bottom: auto !important;
+    height: 84% !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
   }
 
+  /* Nombre: más grande para impacto en pantalla chica */
   .hero-name {
-    font-size: clamp(68px, 18vw, 86px) !important;
+    font-size: clamp(58px, 16vw, 78px) !important;
     line-height: 0.88 !important;
   }
 
   .hero-sep-inner {
-    max-width: 70vw !important;
+    max-width: 62vw !important;
   }
 
   .hero-stats {
     gap: 14px !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 18px !important;
   }
 
   .cta-btn-label {
