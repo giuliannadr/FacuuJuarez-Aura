@@ -1,18 +1,16 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CalendarDays, Sparkles, Clock } from 'lucide-react'
+import { Sparkles, Clock } from 'lucide-react'
 import { CopyBookingLinkButton } from '@/components/layout/CopyBookingLinkButton'
 import { eq, inArray, desc, and, isNull, isNotNull } from 'drizzle-orm'
 import { db, bookings, bookingParticipants, profiles, secondBookingTokens, clients } from '@aura/db'
 import { getSession } from '@/lib/supabase'
 import { BookingCard, type BookingDisplay } from '@/components/features/bookings/BookingCard'
-import { EnableSecondBookingDialog } from '@/components/features/bookings/EnableSecondBookingDialog'
+import { PriorityBookingCard } from '@/components/features/bookings/PriorityBookingCard'
 import {
   PendingSecondTokens,
   type PendingSecondToken,
 } from '@/components/features/bookings/PendingSecondTokens'
-import { format, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
 const TABS = [
@@ -44,13 +42,19 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
   let priorityBookings: {
     id: string
     clientName: string
+    clientEmail: string
     clientId: string | null
     subject: string
+    message: string | null
     date: string
     startTime: string
     endTime: string
     context: 'aura' | 'facundo_solo'
   }[] = []
+  let priorityBookingDetails: Map<
+    string,
+    import('@/components/features/bookings/BookingDetailModal').BookingDetail
+  > = new Map()
 
   if (canSeeSecondBookingSection) {
     // aura_admin/coordinadores solo ven reservas de AURA; facundo ve todos los contextos
@@ -60,8 +64,10 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
       .select({
         id: bookings.id,
         clientName: bookings.clientName,
+        clientEmail: bookings.clientEmail,
         clientId: bookings.clientId,
         subject: bookings.subject,
+        message: bookings.message,
         date: bookings.date,
         startTime: bookings.startTime,
         endTime: bookings.endTime,
@@ -91,6 +97,80 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
       const meetingEndUTC = Date.UTC(y, mo - 1, d, h + 3, min + 45)
       return now > meetingEndUTC && meetingEndUTC > thirtyDaysAgo
     })
+
+    if (priorityBookings.length > 0) {
+      const priorityIds = priorityBookings.map((b) => b.id)
+
+      const [priorityParts, priorityClients] = await Promise.all([
+        db
+          .select({
+            bookingId: bookingParticipants.bookingId,
+            memberId: bookingParticipants.memberId,
+            status: bookingParticipants.status,
+            name: profiles.name,
+          })
+          .from(bookingParticipants)
+          .innerJoin(profiles, eq(profiles.id, bookingParticipants.memberId))
+          .where(inArray(bookingParticipants.bookingId, priorityIds)),
+        (async () => {
+          const clientIds = priorityBookings.filter((b) => b.clientId).map((b) => b.clientId!)
+          if (clientIds.length === 0) return []
+          return db
+            .select({
+              id: clients.id,
+              phone: clients.phone,
+              eventType: clients.eventType,
+              eventTypeOther: clients.eventTypeOther,
+              eventDate: clients.eventDate,
+              eventTime: clients.eventTime,
+              guestCount: clients.guestCount,
+              eventLocation: clients.eventLocation,
+              djPreference: clients.djPreference,
+            })
+            .from(clients)
+            .where(inArray(clients.id, clientIds))
+        })(),
+      ])
+
+      const clientMap = new Map(priorityClients.map((c) => [c.id, c]))
+
+      priorityBookingDetails = new Map(
+        priorityBookings.map((b) => {
+          const clientData = b.clientId ? clientMap.get(b.clientId) : undefined
+          return [
+            b.id,
+            {
+              id: b.id,
+              clientName: b.clientName,
+              clientEmail: b.clientEmail,
+              clientPhone: clientData?.phone ?? null,
+              subject: b.subject,
+              message: b.message,
+              date: b.date,
+              startTime: b.startTime.substring(0, 5),
+              endTime: b.endTime.substring(0, 5),
+              status: 'confirmed' as const,
+              context: b.context,
+              meetingRound: 1,
+              clientId: b.clientId,
+              participants: priorityParts
+                .filter((p) => p.bookingId === b.id)
+                .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
+              myParticipantStatus:
+                priorityParts.find((p) => p.bookingId === b.id && p.memberId === profile.id)
+                  ?.status ?? null,
+              eventType: clientData?.eventType ?? null,
+              eventTypeOther: clientData?.eventTypeOther ?? null,
+              eventDate: clientData?.eventDate ?? null,
+              eventTime: clientData?.eventTime ?? null,
+              guestCount: clientData?.guestCount ?? null,
+              eventLocation: clientData?.eventLocation ?? null,
+              djPreference: clientData?.djPreference ?? null,
+            },
+          ]
+        })
+      )
+    }
   }
 
   // ── Links enviados aún no usados por el cliente ─────────────────────────────
@@ -348,39 +428,20 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
           </div>
 
           {priorityBookings.map((b) => (
-            <div
+            <PriorityBookingCard
               key={b.id}
-              className="flex flex-col gap-3 rounded-xl border border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                  ¿Ya tuviste reunión con{' '}
-                  <span className="text-violet-700 dark:text-violet-400">{b.clientName}</span>?
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                  <span>{b.subject}</span>
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3" />
-                    {format(parseISO(b.date), "d 'de' MMM yyyy", { locale: es })}
-                    {' · '}
-                    {b.startTime.substring(0, 5)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="shrink-0">
-                <EnableSecondBookingDialog
-                  booking={{
-                    id: b.id,
-                    clientId: b.clientId!,
-                    clientName: b.clientName,
-                    subject: b.subject,
-                  }}
-                  allMembers={allMembers}
-                  context={b.context}
-                />
-              </div>
-            </div>
+              booking={{
+                id: b.id,
+                clientId: b.clientId!,
+                clientName: b.clientName,
+                subject: b.subject,
+                date: b.date,
+                startTime: b.startTime.substring(0, 5),
+                context: b.context,
+              }}
+              detail={priorityBookingDetails.get(b.id)!}
+              allMembers={allMembers}
+            />
           ))}
 
           <div className="border-t border-zinc-200 dark:border-white/5" />
