@@ -30,6 +30,7 @@ import {
   sendBookingRejectedEmail,
   sendSecondBookingLinkEmail,
 } from '@/lib/email'
+import { autoCreateContactFromBooking } from '@/app/(dashboard)/clients/actions'
 
 export type ActionResult = { success: true } | { success: false; error: string }
 export type SecondTokenResult =
@@ -293,6 +294,10 @@ export async function respondToBooking(
 
       if (allAccepted) {
         void sendBookingConfirmedEmail(emailData)
+        // Auto-crear contacto en el CRM cuando se confirma la primera reunión
+        if (booking.meetingRound === 1 && booking.clientId) {
+          void autoCreateContactFromBooking(booking.id, booking.clientId, booking.context)
+        }
       } else {
         await db
           .update(availabilitySlots)

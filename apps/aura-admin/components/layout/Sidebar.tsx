@@ -12,6 +12,7 @@ import {
   Settings,
   Music2,
   Sparkles,
+  UserRound,
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ const ICONS: Record<string, React.ElementType> = {
   Users,
   Settings,
   Sparkles,
+  UserRound,
 }
 
 const ROLE_LABELS: Record<Role, string> = {

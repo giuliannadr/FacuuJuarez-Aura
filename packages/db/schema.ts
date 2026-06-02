@@ -177,6 +177,69 @@ export const secondBookingTokens = pgTable('second_booking_tokens', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// ─── Contact CRM ─────────────────────────────────────────────────────────────
+export const contactStatusEnum = pgEnum('contact_status', [
+  'sin_contacto',
+  'reunion_1_reservada',
+  'reunion_1_hecha',
+  'reunion_2_reservada',
+  'reunion_2_hecha',
+  'contratado',
+  'en_proceso',
+  'completado',
+])
+
+/** Persona (cliente real o posible). Un contacto puede tener múltiples eventos a lo largo del tiempo. */
+export const contacts = pgTable('contacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  context: bookingContextEnum('context').notNull(),
+  // Datos principales del contacto
+  name: text('name').notNull(),
+  email: text('email'),
+  phone: text('phone'),
+  // Quinceañera — padre/tutor 1 (requerido para ese tipo de evento)
+  parent1Name: text('parent1_name'),
+  parent1Phone: text('parent1_phone'),
+  parent1Email: text('parent1_email'),
+  // Quinceañera — padre/tutor 2 (opcional)
+  parent2Name: text('parent2_name'),
+  parent2Phone: text('parent2_phone'),
+  parent2Email: text('parent2_email'),
+  // Quinceañera — la festejada
+  birthdayPersonName: text('birthday_person_name'),
+  birthdayPersonPhone: text('birthday_person_phone'),
+  notes: text('notes'),
+  /** 'manual' = cargado a mano por admin | 'booking' = creado automáticamente al confirmar reserva */
+  source: text('source').notNull().default('manual'),
+  /** Referencia al clients row original si fue creado desde una reserva */
+  clientId: uuid('client_id').references(() => clients.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+/** Un evento por contacto. El contacto puede tener historial de múltiples eventos. */
+export const contactEvents = pgTable('contact_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  contactId: uuid('contact_id')
+    .notNull()
+    .references(() => contacts.id, { onDelete: 'cascade' }),
+  status: contactStatusEnum('status').notNull().default('sin_contacto'),
+  eventType: text('event_type'),
+  eventTypeOther: text('event_type_other'),
+  eventDate: date('event_date'),
+  eventTime: text('event_time'),
+  guestCount: integer('guest_count'),
+  eventLocation: text('event_location'),
+  djPreference: text('dj_preference'),
+  notes: text('notes'),
+  /** Reserva vinculada (primera o segunda reunión) */
+  linkedBookingId: uuid('linked_booking_id').references(() => bookings.id, {
+    onDelete: 'set null',
+  }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 // ─── Events ───────────────────────────────────────────────────────────────────
 export const events = pgTable('events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -292,3 +355,8 @@ export type EventComment = typeof eventComments.$inferSelect
 export type NewEventComment = typeof eventComments.$inferInsert
 export type ScheduleTemplateDay = typeof scheduleTemplateDays.$inferSelect
 export type SlotLock = typeof slotLocks.$inferSelect
+export type Contact = typeof contacts.$inferSelect
+export type NewContact = typeof contacts.$inferInsert
+export type ContactEvent = typeof contactEvents.$inferSelect
+export type NewContactEvent = typeof contactEvents.$inferInsert
+export type ContactStatus = (typeof contactStatusEnum.enumValues)[number]
