@@ -34,6 +34,58 @@ import {
 export type ActionResult = { success: true } | { success: false; error: string }
 export type SecondTokenResult = { success: true; link: string } | { success: false; error: string }
 
+// ─── Declinar segunda reserva ─────────────────────────────────────────────────
+
+/**
+ * Marca que el coordinador decidió no habilitar segunda reunión para esta
+ * primera reserva. Inserta un token "usado" con selectedDjIds vacío para que
+ * la reserva deje de aparecer en la sección prioritaria.
+ */
+export async function declineSecondBooking(firstBookingId: string): Promise<ActionResult> {
+  const session = await getSession()
+  if (!session) return { success: false, error: 'No autenticado' }
+
+  if (!session.profile.isCoordinator && session.profile.role !== 'facundo') {
+    return { success: false, error: 'Sin permisos para esta acción' }
+  }
+
+  // Verificar que la primera reserva existe y está confirmada
+  const [booking] = await db
+    .select({ clientId: bookings.clientId })
+    .from(bookings)
+    .where(and(eq(bookings.id, firstBookingId), eq(bookings.status, 'confirmed')))
+    .limit(1)
+
+  if (!booking?.clientId) {
+    return { success: false, error: 'Reserva no encontrada' }
+  }
+
+  // Si ya existe un token, no hacer nada (ya fue procesado)
+  const [existing] = await db
+    .select({ id: secondBookingTokens.id })
+    .from(secondBookingTokens)
+    .where(eq(secondBookingTokens.firstBookingId, firstBookingId))
+    .limit(1)
+
+  if (existing) {
+    revalidatePath('/bookings')
+    return { success: true }
+  }
+
+  // Insertar token "declinado": selectedDjIds vacío + usedAt seteado
+  await db.insert(secondBookingTokens).values({
+    token: crypto.randomUUID(),
+    clientId: booking.clientId,
+    firstBookingId,
+    selectedDjIds: [],
+    usedAt: new Date(),
+  })
+
+  revalidatePath('/bookings')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
 // ─── Crear primera reserva (formulario público /book y /facuu) ────────────────
 
 /**
@@ -362,6 +414,16 @@ export async function createSecondBooking(raw: unknown): Promise<ActionResult> {
 
   const djIds = tokenRecord.selectedDjIds as string[]
 
+  // Obtener el contexto de la primera reserva para mantener coherencia
+  const bookingContext: 'aura' | 'facundo_solo' = tokenRecord.firstBookingId
+    ? await db
+        .select({ context: bookings.context })
+        .from(bookings)
+        .where(eq(bookings.id, tokenRecord.firstBookingId))
+        .limit(1)
+        .then((rows) => (rows[0]?.context as 'aura' | 'facundo_solo') ?? 'aura')
+    : 'aura'
+
   // Verificar conflictos
   const conflicts = await db
     .selectDistinct({ bookingId: bookingParticipants.bookingId })
@@ -391,7 +453,7 @@ export async function createSecondBooking(raw: unknown): Promise<ActionResult> {
   const [booking] = await db
     .insert(bookings)
     .values({
-      context: 'aura',
+      context: bookingContext,
       meetingType: 'meeting',
       clientName: client.name,
       clientEmail: client.email,
@@ -413,12 +475,13 @@ export async function createSecondBooking(raw: unknown): Promise<ActionResult> {
     }))
   )
 
-  // Marcar slots como ocupados
+  // Marcar slots como ocupados (contexto correcto)
   await db
     .update(availabilitySlots)
     .set({ isBooked: true })
     .where(
       and(
+        eq(availabilitySlots.context, bookingContext),
         eq(availabilitySlots.date, data.date),
         eq(availabilitySlots.startTime, data.startTime),
         inArray(availabilitySlots.memberId, djIds)

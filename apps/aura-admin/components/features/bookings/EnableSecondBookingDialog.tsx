@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, Copy, Loader2, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { createSecondBookingToken } from '@/app/(dashboard)/bookings/actions'
+import { createSecondBookingToken, declineSecondBooking } from '@/app/(dashboard)/bookings/actions'
 import { cn } from '@/lib/utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,21 +19,32 @@ interface Booking {
 interface Member {
   id: string
   name: string
+  role: string
 }
 
 interface EnableSecondBookingDialogProps {
   booking: Booking
   allMembers: Member[]
+  context: string
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondBookingDialogProps) {
+export function EnableSecondBookingDialog({
+  booking,
+  allMembers,
+  context,
+}: EnableSecondBookingDialogProps) {
+  const isFacuuSolo = context === 'facundo_solo'
+  const facuuProfile = allMembers.find((m) => m.role === 'facundo')
+
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [generatedLink, setGeneratedLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isDeclining, startDeclineTransition] = useTransition()
 
   function toggleMember(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
@@ -40,7 +52,8 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
 
   function handleOpen() {
     setOpen(true)
-    setSelectedIds([])
+    // Para facundo_solo se auto-selecciona a Facuu, no requiere selección manual
+    setSelectedIds(isFacuuSolo && facuuProfile ? [facuuProfile.id] : [])
     setGeneratedLink(null)
     setCopied(false)
   }
@@ -68,6 +81,18 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
     })
   }
 
+  function handleDecline() {
+    startDeclineTransition(async () => {
+      const result = await declineSecondBooking(booking.id)
+      if (result.success) {
+        toast.success('Marcado como sin segunda reunión')
+        router.refresh()
+      } else {
+        toast.error(result.error)
+      }
+    })
+  }
+
   async function handleCopy() {
     if (!generatedLink) return
     await navigator.clipboard.writeText(generatedLink)
@@ -78,13 +103,22 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
 
   return (
     <>
-      {/* Trigger */}
-      <button
-        onClick={handleOpen}
-        className="rounded-md border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 transition-colors hover:bg-violet-500/20"
-      >
-        Habilitar segunda reserva
-      </button>
+      {/* Triggers */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleOpen}
+          className="rounded-md border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-600 dark:text-violet-400 transition-colors hover:bg-violet-500/20"
+        >
+          Habilitar segunda reserva
+        </button>
+        <button
+          onClick={handleDecline}
+          disabled={isDeclining}
+          className="rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10 disabled:opacity-40"
+        >
+          {isDeclining ? <Loader2 className="h-3 w-3 animate-spin" /> : 'No necesita'}
+        </button>
+      </div>
 
       {/* Modal backdrop */}
       {open && (
@@ -100,7 +134,8 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
                   Segunda reunión con {booking.clientName}
                 </h3>
                 <p className="mt-0.5 text-xs text-zinc-400 dark:text-zinc-500">
-                  {booking.subject} · Elegí los DJs que participarán
+                  {booking.subject}
+                  {!isFacuuSolo && ' · Elegí los DJs que participarán'}
                 </p>
               </div>
               <button
@@ -113,56 +148,69 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
 
             {!generatedLink ? (
               <>
-                {/* DJ selection */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                    Seleccioná los DJs
-                  </p>
-                  {allMembers.length === 0 ? (
-                    <p className="text-sm text-zinc-400 dark:text-zinc-600">
-                      No hay DJs disponibles en el equipo.
+                {isFacuuSolo ? (
+                  /* Contexto facundo_solo: no se selecciona DJ, es siempre con Facuu */
+                  <div className="rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] px-4 py-3">
+                    <p className="text-sm text-zinc-700 dark:text-zinc-200">
+                      La segunda reunión será con{' '}
+                      <span className="font-semibold">{facuuProfile?.name ?? 'Facuu'}</span>.
                     </p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {allMembers.map((member) => {
-                        const selected = selectedIds.includes(member.id)
-                        return (
-                          <button
-                            key={member.id}
-                            onClick={() => toggleMember(member.id)}
-                            className={cn(
-                              'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all',
-                              selected
-                                ? 'border-violet-500 bg-violet-500/10'
-                                : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 hover:bg-zinc-50 dark:hover:bg-white/[0.04]'
-                            )}
-                          >
-                            <div
+                    <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+                      Se le enviará el link a {booking.clientName} para que elija fecha y horario.
+                    </p>
+                  </div>
+                ) : (
+                  /* Contexto aura: selección de DJs del equipo */
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                      Seleccioná los DJs
+                    </p>
+                    {allMembers.length === 0 ? (
+                      <p className="text-sm text-zinc-400 dark:text-zinc-600">
+                        No hay DJs disponibles en el equipo.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {allMembers.map((member) => {
+                          const selected = selectedIds.includes(member.id)
+                          return (
+                            <button
+                              key={member.id}
+                              onClick={() => toggleMember(member.id)}
                               className={cn(
-                                'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                                'flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-all',
                                 selected
-                                  ? 'border-violet-500 bg-violet-500'
-                                  : 'border-zinc-300 dark:border-white/20'
+                                  ? 'border-violet-500 bg-violet-500/10'
+                                  : 'border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/20 hover:bg-zinc-50 dark:hover:bg-white/[0.04]'
                               )}
                             >
-                              {selected && <Check className="h-3 w-3 text-white" />}
-                            </div>
-                            <span
-                              className={cn(
-                                'text-sm font-medium',
-                                selected
-                                  ? 'text-violet-700 dark:text-violet-300'
-                                  : 'text-zinc-700 dark:text-zinc-200'
-                              )}
-                            >
-                              {member.name}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                              <div
+                                className={cn(
+                                  'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                                  selected
+                                    ? 'border-violet-500 bg-violet-500'
+                                    : 'border-zinc-300 dark:border-white/20'
+                                )}
+                              >
+                                {selected && <Check className="h-3 w-3 text-white" />}
+                              </div>
+                              <span
+                                className={cn(
+                                  'text-sm font-medium',
+                                  selected
+                                    ? 'text-violet-700 dark:text-violet-300'
+                                    : 'text-zinc-700 dark:text-zinc-200'
+                                )}
+                              >
+                                {member.name}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <p className="mt-3 text-xs text-zinc-400 dark:text-zinc-500">
                   Al generar el link, le enviaremos un email a {booking.clientName} con el acceso
@@ -179,7 +227,7 @@ export function EnableSecondBookingDialog({ booking, allMembers }: EnableSecondB
                   </button>
                   <button
                     onClick={handleGenerate}
-                    disabled={selectedIds.length === 0 || isPending}
+                    disabled={(isFacuuSolo ? !facuuProfile : selectedIds.length === 0) || isPending}
                     className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-500 disabled:opacity-40"
                   >
                     {isPending ? (

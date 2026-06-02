@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CalendarDays, Sparkles } from 'lucide-react'
+import { CalendarDays, Sparkles, Clock } from 'lucide-react'
 import { CopyBookingLinkButton } from '@/components/layout/CopyBookingLinkButton'
-import { eq, inArray, desc, and, isNull } from 'drizzle-orm'
+import { eq, inArray, desc, and, isNull, isNotNull } from 'drizzle-orm'
 import { db, bookings, bookingParticipants, profiles, secondBookingTokens, clients } from '@aura/db'
 import { getSession } from '@/lib/supabase'
 import { BookingCard, type BookingDisplay } from '@/components/features/bookings/BookingCard'
@@ -43,6 +43,7 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
     date: string
     startTime: string
     endTime: string
+    context: 'aura' | 'facundo_solo'
   }[] = []
 
   if (canSeeSecondBookingSection) {
@@ -58,6 +59,7 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
         date: bookings.date,
         startTime: bookings.startTime,
         endTime: bookings.endTime,
+        context: bookings.context,
       })
       .from(bookings)
       .leftJoin(secondBookingTokens, eq(secondBookingTokens.firstBookingId, bookings.id))
@@ -66,28 +68,29 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
           eq(bookings.meetingRound, 1),
           eq(bookings.status, 'confirmed'),
           isNull(secondBookingTokens.id),
+          isNotNull(bookings.clientId),
           bookingCtxFilter
         )
       )
       .orderBy(desc(bookings.createdAt))
 
-    // Solo mostrar reservas cuya reunión ya terminó:
-    // fecha + startTime + 45 min < ahora (ART = UTC-3)
+    // Solo mostrar reservas cuya reunión ya terminó, dentro de los últimos 30 días
     const now = Date.now()
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
     priorityBookings = raw.filter((b) => {
       const [y, mo, d] = b.date.split('-').map(Number)
       const time = b.startTime.substring(0, 5)
       const [h, min] = time.split(':').map(Number)
       // UTC = ART + 3 h → fin de reunión en UTC = h + 3 h + 45 min
       const meetingEndUTC = Date.UTC(y, mo - 1, d, h + 3, min + 45)
-      return now > meetingEndUTC
+      return now > meetingEndUTC && meetingEndUTC > thirtyDaysAgo
     })
   }
 
   // ── DJs disponibles para el diálogo (incluye a Facuu que tiene role='facundo') ──
   const allMembers = canSeeSecondBookingSection
     ? await db
-        .select({ id: profiles.id, name: profiles.name })
+        .select({ id: profiles.id, name: profiles.name, role: profiles.role })
         .from(profiles)
         .where(inArray(profiles.role, ['facundo', 'aura_member']))
         .orderBy(profiles.name)
@@ -222,6 +225,18 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
 
   const filtered = allBookings.filter((b) => b.status === activeTab)
 
+  // ── Split pendientes en próximas y pasadas ──────────────────────────────────
+  const nowMs = Date.now()
+  const isBookingPast = (b: { date: string; startTime: string }) => {
+    const [y, mo, d] = b.date.split('-').map(Number)
+    const [h, min] = b.startTime.split(':').map(Number)
+    // ART = UTC-3 → fin de reunión en UTC = hora local + 3h + 45min
+    return Date.UTC(y, mo - 1, d, h + 3, min + 45) < nowMs
+  }
+
+  const upcomingPending = filtered.filter((b) => !isBookingPast(b))
+  const pastPending = filtered.filter((b) => isBookingPast(b))
+
   const counts = {
     pending: allBookings.filter((b) => b.status === 'pending').length,
     confirmed: allBookings.filter((b) => b.status === 'confirmed').length,
@@ -260,7 +275,7 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                  ¿Acabás de tener reunión con{' '}
+                  ¿Ya tuviste reunión con{' '}
                   <span className="text-violet-700 dark:text-violet-400">{b.clientName}</span>?
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-400 dark:text-zinc-500">
@@ -275,21 +290,16 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
               </div>
 
               <div className="shrink-0">
-                {b.clientId ? (
-                  <EnableSecondBookingDialog
-                    booking={{
-                      id: b.id,
-                      clientId: b.clientId,
-                      clientName: b.clientName,
-                      subject: b.subject,
-                    }}
-                    allMembers={allMembers}
-                  />
-                ) : (
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 italic">
-                    Reserva creada con el formulario antiguo
-                  </span>
-                )}
+                <EnableSecondBookingDialog
+                  booking={{
+                    id: b.id,
+                    clientId: b.clientId!,
+                    clientName: b.clientName,
+                    subject: b.subject,
+                  }}
+                  allMembers={allMembers}
+                  context={b.context}
+                />
               </div>
             </div>
           ))}
@@ -328,20 +338,56 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
         ))}
       </div>
 
-      {/* Booking list */}
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-zinc-200 dark:border-white/10">
-            <p className="text-sm text-zinc-400 dark:text-zinc-600">
-              No hay reservas en esta categoría
-            </p>
-          </div>
-        ) : (
-          filtered.map((booking) => (
-            <BookingCard key={booking.id} booking={booking} role={profile.role} />
-          ))
-        )}
-      </div>
+      {/* ─── Lista de reservas ─────────────────────────────────────────────── */}
+      {activeTab === 'pending' ? (
+        <div className="space-y-6">
+          {/* Próximas */}
+          {upcomingPending.length > 0 ? (
+            <div className="space-y-3">
+              {upcomingPending.map((booking) => (
+                <BookingCard key={booking.id} booking={booking} role={profile.role} />
+              ))}
+            </div>
+          ) : (
+            pastPending.length === 0 && (
+              <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-zinc-200 dark:border-white/10">
+                <p className="text-sm text-zinc-400 dark:text-zinc-600">
+                  No hay reservas pendientes
+                </p>
+              </div>
+            )
+          )}
+
+          {/* Pasadas sin confirmar */}
+          {pastPending.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+                <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                  Pasadas sin confirmar
+                </span>
+              </div>
+              {pastPending.map((booking) => (
+                <BookingCard key={booking.id} booking={booking} role={profile.role} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.length === 0 ? (
+            <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-zinc-200 dark:border-white/10">
+              <p className="text-sm text-zinc-400 dark:text-zinc-600">
+                No hay reservas en esta categoría
+              </p>
+            </div>
+          ) : (
+            filtered.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} role={profile.role} />
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

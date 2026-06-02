@@ -20,11 +20,13 @@ export interface PriorityBooking {
   subject: string
   date: string
   startTime: string // ya en formato HH:MM
+  context: 'aura' | 'facundo_solo'
 }
 
 interface Member {
   id: string
   name: string
+  role: string
 }
 
 interface DashboardRecentBookingsProps {
@@ -102,21 +104,16 @@ export function DashboardRecentBookings({
               </div>
 
               <div className="shrink-0">
-                {b.clientId ? (
-                  <EnableSecondBookingDialog
-                    booking={{
-                      id: b.id,
-                      clientId: b.clientId,
-                      clientName: b.clientName,
-                      subject: b.subject,
-                    }}
-                    allMembers={allMembers}
-                  />
-                ) : (
-                  <span className="text-xs text-zinc-400 dark:text-zinc-500 italic">
-                    Reserva creada con el formulario antiguo
-                  </span>
-                )}
+                <EnableSecondBookingDialog
+                  booking={{
+                    id: b.id,
+                    clientId: b.clientId!,
+                    clientName: b.clientName,
+                    subject: b.subject,
+                  }}
+                  allMembers={allMembers}
+                  context={b.context}
+                />
               </div>
             </div>
           ))}

@@ -50,6 +50,16 @@ export default async function SecondBookingPage({ params }: Props) {
 
   const djIds = tokenRecord.selectedDjIds as string[]
 
+  // Obtener el contexto de la primera reserva (aura o facundo_solo)
+  const bookingContext: 'aura' | 'facundo_solo' = tokenRecord.firstBookingId
+    ? await db
+        .select({ context: bookings.context })
+        .from(bookings)
+        .where(eq(bookings.id, tokenRecord.firstBookingId))
+        .limit(1)
+        .then((rows) => (rows[0]?.context as 'aura' | 'facundo_solo') ?? 'aura')
+    : 'aura'
+
   // Obtener perfiles de los DJs
   const djProfiles = await db
     .select({ id: profiles.id, name: profiles.name })
@@ -62,7 +72,7 @@ export default async function SecondBookingPage({ params }: Props) {
   const today = now.toISOString().split('T')[0]
   const nowMin = now.getHours() * 60 + now.getMinutes()
 
-  // Ventanas de disponibilidad de los DJs (context='aura')
+  // Ventanas de disponibilidad de los DJs (contexto dinámico según la primera reserva)
   const windows = await db
     .select({
       memberId: availabilitySlots.memberId,
@@ -73,7 +83,7 @@ export default async function SecondBookingPage({ params }: Props) {
     .from(availabilitySlots)
     .where(
       and(
-        eq(availabilitySlots.context, 'aura'),
+        eq(availabilitySlots.context, bookingContext),
         inArray(availabilitySlots.memberId, djIds),
         gte(availabilitySlots.date, today)
       )
@@ -167,11 +177,12 @@ export default async function SecondBookingPage({ params }: Props) {
           ¡Hola, {client.name}! 👋
         </h1>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Ya tuvimos nuestra primera reunión. Ahora elegí fecha y horario para reunirte con los DJs
-          de tu {eventTypeLabel[client.eventType] ?? 'evento'}.
+          {bookingContext === 'facundo_solo'
+            ? `Ya tuvimos nuestra primera reunión. Ahora elegí fecha y horario para reunirte con ${djNames[0] ?? 'Facuu'}.`
+            : `Ya tuvimos nuestra primera reunión. Ahora elegí fecha y horario para reunirte con los DJs de tu ${eventTypeLabel[client.eventType] ?? 'evento'}.`}
         </p>
 
-        {/* DJs asignados */}
+        {/* DJ(s) asignados */}
         <div className="mt-4 flex flex-wrap gap-2">
           {djNames.map((name) => (
             <span

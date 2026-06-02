@@ -28,16 +28,16 @@ body {
 
 /* ── Imagen responsive ── */
 .hero-img-main {
-  transform: translateX(20px);
+  transform: translateX(55px);
 }
 .hero-img-echo1 {
-  transform: translateX(8px);
+  transform: translateX(40px);
 }
 .hero-img-echo2 {
-  transform: translateX(-35px);
+  transform: translateX(22px);
 }
 .hero-img-echo3 {
-  transform: translateX(-80px);
+  transform: translateX(6px);
 }
 
 @media (min-width: 768px) {
@@ -67,18 +67,7 @@ body {
     display: none !important;
   }
 
-  /* Echo images: solo funcionan en desktop */
-  .hero-img-echo1,
-  .hero-img-echo2,
-  .hero-img-echo3 {
-    display: none !important;
-  }
-
-  /* Foto: Facuu corrido a la derecha, área izquierda libre para el texto */
-  .hero-img-main {
-    transform: none !important;
-    object-position: 72% 8% !important;
-  }
+  /* Foto principal: se mantiene el object-position del inline style (50% 26%) */
 
   /* Columna: mismo concepto que desktop (nombre arriba, stats abajo)
      pero con ancho acotado para que no se solape con la foto */

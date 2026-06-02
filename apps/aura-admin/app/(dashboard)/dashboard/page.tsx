@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { CalendarDays, CheckCircle2, Users, XCircle, Clock, Sparkles } from 'lucide-react'
 import { CopyBookingLinkButton } from '@/components/layout/CopyBookingLinkButton'
-import { eq, and, gte, lte, desc, count, inArray, isNull, or, gt } from 'drizzle-orm'
+import { eq, and, gte, lte, desc, count, inArray, isNull, isNotNull, or, gt } from 'drizzle-orm'
 import { db, bookings, bookingParticipants, profiles, secondBookingTokens, clients } from '@aura/db'
 import { getSession } from '@/lib/supabase'
 import { can } from '@/lib/permissions'
@@ -420,10 +420,11 @@ export default async function DashboardPage() {
 
   // ── Segunda reserva (solo admins) ────────────────────────────────────────────
   let priorityBookings: PriorityBooking[] = []
-  let allMembers: { id: string; name: string }[] = []
+  let allMembers: { id: string; name: string; role: string }[] = []
 
   if (isAdmin) {
     const now = Date.now()
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000
     const raw = await db
       .select({
         id: bookings.id,
@@ -432,6 +433,7 @@ export default async function DashboardPage() {
         subject: bookings.subject,
         date: bookings.date,
         startTime: bookings.startTime,
+        context: bookings.context,
       })
       .from(bookings)
       .leftJoin(secondBookingTokens, eq(secondBookingTokens.firstBookingId, bookings.id))
@@ -440,6 +442,7 @@ export default async function DashboardPage() {
           eq(bookings.meetingRound, 1),
           eq(bookings.status, 'confirmed'),
           isNull(secondBookingTokens.id),
+          isNotNull(bookings.clientId),
           ctxFilter
         )
       )
@@ -449,12 +452,13 @@ export default async function DashboardPage() {
       .filter((b) => {
         const [y, mo, d] = b.date.split('-').map(Number)
         const [h, min] = b.startTime.substring(0, 5).split(':').map(Number)
-        return Date.now() > Date.UTC(y, mo - 1, d, h + 3, min + 45)
+        const meetingEndUTC = Date.UTC(y, mo - 1, d, h + 3, min + 45)
+        return now > meetingEndUTC && meetingEndUTC > thirtyDaysAgo
       })
       .map((b) => ({ ...b, startTime: b.startTime.substring(0, 5) }))
 
     allMembers = await db
-      .select({ id: profiles.id, name: profiles.name })
+      .select({ id: profiles.id, name: profiles.name, role: profiles.role })
       .from(profiles)
       .where(inArray(profiles.role, ['facundo', 'aura_member']))
       .orderBy(profiles.name)
