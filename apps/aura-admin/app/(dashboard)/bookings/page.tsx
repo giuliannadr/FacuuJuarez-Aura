@@ -7,6 +7,10 @@ import { db, bookings, bookingParticipants, profiles, secondBookingTokens, clien
 import { getSession } from '@/lib/supabase'
 import { BookingCard, type BookingDisplay } from '@/components/features/bookings/BookingCard'
 import { EnableSecondBookingDialog } from '@/components/features/bookings/EnableSecondBookingDialog'
+import {
+  PendingSecondTokens,
+  type PendingSecondToken,
+} from '@/components/features/bookings/PendingSecondTokens'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -33,6 +37,8 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
 
   const canSeeSecondBookingSection =
     profile.role === 'facundo' || profile.role === 'aura_admin' || profile.isCoordinator
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
   // ── Sección prioritaria: primeras reuniones confirmadas sin segunda reserva ──
   let priorityBookings: {
@@ -87,6 +93,39 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
     })
   }
 
+  // ── Links enviados aún no usados por el cliente ─────────────────────────────
+  let pendingSecondTokens: PendingSecondToken[] = []
+
+  if (canSeeSecondBookingSection) {
+    const bookingCtxFilter = profile.role !== 'facundo' ? eq(bookings.context, 'aura') : undefined
+
+    const rawTokens = await db
+      .select({
+        id: secondBookingTokens.id,
+        token: secondBookingTokens.token,
+        selectedDjIds: secondBookingTokens.selectedDjIds,
+        clientName: bookings.clientName,
+        subject: bookings.subject,
+        date: bookings.date,
+        startTime: bookings.startTime,
+      })
+      .from(secondBookingTokens)
+      .innerJoin(bookings, eq(bookings.id, secondBookingTokens.firstBookingId))
+      .where(and(isNull(secondBookingTokens.usedAt), bookingCtxFilter))
+      .orderBy(desc(secondBookingTokens.createdAt))
+
+    pendingSecondTokens = rawTokens
+      .filter((t) => t.selectedDjIds.length > 0)
+      .map((t) => ({
+        id: t.id,
+        link: `${appUrl}/book/segunda/${t.token}`,
+        clientName: t.clientName,
+        subject: t.subject,
+        date: t.date,
+        startTime: t.startTime.substring(0, 5),
+      }))
+  }
+
   // ── DJs disponibles para el diálogo (incluye a Facuu que tiene role='facundo') ──
   const allMembers = canSeeSecondBookingSection
     ? await db
@@ -119,38 +158,58 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
           )
         )
 
-      // Teléfono del cliente (para botón de WhatsApp en el modal)
+      // Datos del cliente (para modal de detalle)
       const clientIds = rawBookings.filter((b) => b.clientId).map((b) => b.clientId!)
       const clientRows =
         clientIds.length > 0
           ? await db
-              .select({ id: clients.id, phone: clients.phone })
+              .select({
+                id: clients.id,
+                phone: clients.phone,
+                eventType: clients.eventType,
+                eventTypeOther: clients.eventTypeOther,
+                eventDate: clients.eventDate,
+                eventTime: clients.eventTime,
+                guestCount: clients.guestCount,
+                eventLocation: clients.eventLocation,
+                djPreference: clients.djPreference,
+              })
               .from(clients)
               .where(inArray(clients.id, clientIds))
           : []
-      const phoneByClientId = new Map(clientRows.map((c) => [c.id, c.phone ?? null]))
+      const clientByClientId = new Map(clientRows.map((c) => [c.id, c]))
 
-      allBookings = rawBookings.map((b) => ({
-        id: b.id,
-        clientName: b.clientName,
-        clientEmail: b.clientEmail,
-        clientPhone: b.clientId ? (phoneByClientId.get(b.clientId) ?? null) : null,
-        subject: b.subject,
-        message: b.message,
-        date: b.date,
-        startTime: b.startTime.substring(0, 5),
-        endTime: b.endTime.substring(0, 5),
-        status: b.status,
-        context: b.context,
-        meetingRound: b.meetingRound ?? 1,
-        clientId: b.clientId,
-        participants: participants
-          .filter((p) => p.bookingId === b.id)
-          .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
-        myParticipantStatus:
-          participants.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ??
-          null,
-      }))
+      allBookings = rawBookings.map((b) => {
+        const clientData = b.clientId ? clientByClientId.get(b.clientId) : undefined
+        return {
+          id: b.id,
+          clientName: b.clientName,
+          clientEmail: b.clientEmail,
+          clientPhone: clientData?.phone ?? null,
+          subject: b.subject,
+          message: b.message,
+          date: b.date,
+          startTime: b.startTime.substring(0, 5),
+          endTime: b.endTime.substring(0, 5),
+          status: b.status,
+          context: b.context,
+          meetingRound: b.meetingRound ?? 1,
+          clientId: b.clientId,
+          participants: participants
+            .filter((p) => p.bookingId === b.id)
+            .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
+          myParticipantStatus:
+            participants.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ??
+            null,
+          eventType: clientData?.eventType ?? null,
+          eventTypeOther: clientData?.eventTypeOther ?? null,
+          eventDate: clientData?.eventDate ?? null,
+          eventTime: clientData?.eventTime ?? null,
+          guestCount: clientData?.guestCount ?? null,
+          eventLocation: clientData?.eventLocation ?? null,
+          djPreference: clientData?.djPreference ?? null,
+        }
+      })
     }
   } else {
     const myParticipations = await db
@@ -188,38 +247,58 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
           )
         )
 
-      // Teléfono del cliente (para botón de WhatsApp en el modal)
+      // Datos del cliente (para modal de detalle)
       const clientIds = rawBookings.filter((b) => b.clientId).map((b) => b.clientId!)
       const clientRows =
         clientIds.length > 0
           ? await db
-              .select({ id: clients.id, phone: clients.phone })
+              .select({
+                id: clients.id,
+                phone: clients.phone,
+                eventType: clients.eventType,
+                eventTypeOther: clients.eventTypeOther,
+                eventDate: clients.eventDate,
+                eventTime: clients.eventTime,
+                guestCount: clients.guestCount,
+                eventLocation: clients.eventLocation,
+                djPreference: clients.djPreference,
+              })
               .from(clients)
               .where(inArray(clients.id, clientIds))
           : []
-      const phoneByClientId = new Map(clientRows.map((c) => [c.id, c.phone ?? null]))
+      const clientByClientId = new Map(clientRows.map((c) => [c.id, c]))
 
-      allBookings = rawBookings.map((b) => ({
-        id: b.id,
-        clientName: b.clientName,
-        clientEmail: b.clientEmail,
-        clientPhone: b.clientId ? (phoneByClientId.get(b.clientId) ?? null) : null,
-        subject: b.subject,
-        message: b.message,
-        date: b.date,
-        startTime: b.startTime.substring(0, 5),
-        endTime: b.endTime.substring(0, 5),
-        status: b.status,
-        context: b.context,
-        meetingRound: b.meetingRound ?? 1,
-        clientId: b.clientId,
-        participants: participants
-          .filter((p) => p.bookingId === b.id)
-          .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
-        myParticipantStatus:
-          participants.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ??
-          null,
-      }))
+      allBookings = rawBookings.map((b) => {
+        const clientData = b.clientId ? clientByClientId.get(b.clientId) : undefined
+        return {
+          id: b.id,
+          clientName: b.clientName,
+          clientEmail: b.clientEmail,
+          clientPhone: clientData?.phone ?? null,
+          subject: b.subject,
+          message: b.message,
+          date: b.date,
+          startTime: b.startTime.substring(0, 5),
+          endTime: b.endTime.substring(0, 5),
+          status: b.status,
+          context: b.context,
+          meetingRound: b.meetingRound ?? 1,
+          clientId: b.clientId,
+          participants: participants
+            .filter((p) => p.bookingId === b.id)
+            .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
+          myParticipantStatus:
+            participants.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ??
+            null,
+          eventType: clientData?.eventType ?? null,
+          eventTypeOther: clientData?.eventTypeOther ?? null,
+          eventDate: clientData?.eventDate ?? null,
+          eventTime: clientData?.eventTime ?? null,
+          guestCount: clientData?.guestCount ?? null,
+          eventLocation: clientData?.eventLocation ?? null,
+          djPreference: clientData?.djPreference ?? null,
+        }
+      })
     }
   }
 
@@ -304,6 +383,14 @@ export default async function BookingsPage({ searchParams }: BookingsPageProps) 
             </div>
           ))}
 
+          <div className="border-t border-zinc-200 dark:border-white/5" />
+        </div>
+      )}
+
+      {/* ─── Links enviados pendientes ────────────────────────────────────── */}
+      {canSeeSecondBookingSection && pendingSecondTokens.length > 0 && (
+        <div className="space-y-3">
+          <PendingSecondTokens tokens={pendingSecondTokens} />
           <div className="border-t border-zinc-200 dark:border-white/5" />
         </div>
       )}

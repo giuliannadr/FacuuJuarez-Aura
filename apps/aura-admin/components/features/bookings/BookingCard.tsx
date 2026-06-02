@@ -29,6 +29,14 @@ export interface BookingDisplay {
   clientId: string | null
   participants: { memberId: string; name: string; status: 'pending' | 'accepted' | 'rejected' }[]
   myParticipantStatus: 'pending' | 'accepted' | 'rejected' | null
+  // Datos del cliente (tabla clients)
+  eventType?: string | null
+  eventTypeOther?: string | null
+  eventDate?: string | null
+  eventTime?: string | null
+  guestCount?: number | null
+  eventLocation?: string | null
+  djPreference?: string | null
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────

@@ -266,10 +266,40 @@ export default async function DashboardPage() {
         .innerJoin(profiles, eq(profiles.id, bookingParticipants.memberId))
         .where(eq(bookingParticipants.bookingId, nextRaw.id))
 
+      let nextClientData:
+        | {
+            phone: string | null
+            eventType: string
+            eventTypeOther: string | null
+            eventDate: string | null
+            eventTime: string | null
+            guestCount: number | null
+            eventLocation: string | null
+            djPreference: string | null
+          }
+        | undefined
+      if (nextRaw.clientId) {
+        const [row] = await db
+          .select({
+            phone: clients.phone,
+            eventType: clients.eventType,
+            eventTypeOther: clients.eventTypeOther,
+            eventDate: clients.eventDate,
+            eventTime: clients.eventTime,
+            guestCount: clients.guestCount,
+            eventLocation: clients.eventLocation,
+            djPreference: clients.djPreference,
+          })
+          .from(clients)
+          .where(eq(clients.id, nextRaw.clientId))
+        nextClientData = row
+      }
+
       nextBookingDetail = {
         id: nextRaw.id,
         clientName: nextRaw.clientName,
         clientEmail: nextRaw.clientEmail,
+        clientPhone: nextClientData?.phone ?? null,
         subject: nextRaw.subject,
         message: nextRaw.message,
         date: nextRaw.date,
@@ -281,6 +311,13 @@ export default async function DashboardPage() {
         clientId: nextRaw.clientId,
         participants: parts.map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
         myParticipantStatus: parts.find((p) => p.memberId === profile.id)?.status ?? null,
+        eventType: nextClientData?.eventType ?? null,
+        eventTypeOther: nextClientData?.eventTypeOther ?? null,
+        eventDate: nextClientData?.eventDate ?? null,
+        eventTime: nextClientData?.eventTime ?? null,
+        guestCount: nextClientData?.guestCount ?? null,
+        eventLocation: nextClientData?.eventLocation ?? null,
+        djPreference: nextClientData?.djPreference ?? null,
       }
     }
   }
@@ -329,25 +366,56 @@ export default async function DashboardPage() {
           )
         )
 
-      recentBookings = raw.map((b) => ({
-        id: b.id,
-        clientName: b.clientName,
-        clientEmail: b.clientEmail,
-        subject: b.subject,
-        message: b.message,
-        date: b.date,
-        startTime: b.startTime.substring(0, 5),
-        endTime: b.endTime.substring(0, 5),
-        status: b.status,
-        context: b.context,
-        meetingRound: b.meetingRound ?? 1,
-        clientId: b.clientId,
-        participants: parts
-          .filter((p) => p.bookingId === b.id)
-          .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
-        myParticipantStatus:
-          parts.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ?? null,
-      }))
+      const adminClientIds = raw.filter((b) => b.clientId).map((b) => b.clientId!)
+      const adminClientRows =
+        adminClientIds.length > 0
+          ? await db
+              .select({
+                id: clients.id,
+                phone: clients.phone,
+                eventType: clients.eventType,
+                eventTypeOther: clients.eventTypeOther,
+                eventDate: clients.eventDate,
+                eventTime: clients.eventTime,
+                guestCount: clients.guestCount,
+                eventLocation: clients.eventLocation,
+                djPreference: clients.djPreference,
+              })
+              .from(clients)
+              .where(inArray(clients.id, adminClientIds))
+          : []
+      const adminClientMap = new Map(adminClientRows.map((c) => [c.id, c]))
+
+      recentBookings = raw.map((b) => {
+        const clientData = b.clientId ? adminClientMap.get(b.clientId) : undefined
+        return {
+          id: b.id,
+          clientName: b.clientName,
+          clientEmail: b.clientEmail,
+          clientPhone: clientData?.phone ?? null,
+          subject: b.subject,
+          message: b.message,
+          date: b.date,
+          startTime: b.startTime.substring(0, 5),
+          endTime: b.endTime.substring(0, 5),
+          status: b.status,
+          context: b.context,
+          meetingRound: b.meetingRound ?? 1,
+          clientId: b.clientId,
+          participants: parts
+            .filter((p) => p.bookingId === b.id)
+            .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
+          myParticipantStatus:
+            parts.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ?? null,
+          eventType: clientData?.eventType ?? null,
+          eventTypeOther: clientData?.eventTypeOther ?? null,
+          eventDate: clientData?.eventDate ?? null,
+          eventTime: clientData?.eventTime ?? null,
+          guestCount: clientData?.guestCount ?? null,
+          eventLocation: clientData?.eventLocation ?? null,
+          djPreference: clientData?.djPreference ?? null,
+        }
+      })
     }
   } else {
     const myParts = await db
@@ -395,25 +463,56 @@ export default async function DashboardPage() {
             )
           )
 
-        recentBookings = raw.map((b) => ({
-          id: b.id,
-          clientName: b.clientName,
-          clientEmail: b.clientEmail,
-          subject: b.subject,
-          message: b.message,
-          date: b.date,
-          startTime: b.startTime.substring(0, 5),
-          endTime: b.endTime.substring(0, 5),
-          status: b.status,
-          context: b.context,
-          meetingRound: b.meetingRound ?? 1,
-          clientId: b.clientId,
-          participants: parts
-            .filter((p) => p.bookingId === b.id)
-            .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
-          myParticipantStatus:
-            parts.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ?? null,
-        }))
+        const memberClientIds = raw.filter((b) => b.clientId).map((b) => b.clientId!)
+        const memberClientRows =
+          memberClientIds.length > 0
+            ? await db
+                .select({
+                  id: clients.id,
+                  phone: clients.phone,
+                  eventType: clients.eventType,
+                  eventTypeOther: clients.eventTypeOther,
+                  eventDate: clients.eventDate,
+                  eventTime: clients.eventTime,
+                  guestCount: clients.guestCount,
+                  eventLocation: clients.eventLocation,
+                  djPreference: clients.djPreference,
+                })
+                .from(clients)
+                .where(inArray(clients.id, memberClientIds))
+            : []
+        const memberClientMap = new Map(memberClientRows.map((c) => [c.id, c]))
+
+        recentBookings = raw.map((b) => {
+          const clientData = b.clientId ? memberClientMap.get(b.clientId) : undefined
+          return {
+            id: b.id,
+            clientName: b.clientName,
+            clientEmail: b.clientEmail,
+            clientPhone: clientData?.phone ?? null,
+            subject: b.subject,
+            message: b.message,
+            date: b.date,
+            startTime: b.startTime.substring(0, 5),
+            endTime: b.endTime.substring(0, 5),
+            status: b.status,
+            context: b.context,
+            meetingRound: b.meetingRound ?? 1,
+            clientId: b.clientId,
+            participants: parts
+              .filter((p) => p.bookingId === b.id)
+              .map((p) => ({ memberId: p.memberId, name: p.name, status: p.status })),
+            myParticipantStatus:
+              parts.find((p) => p.bookingId === b.id && p.memberId === profile.id)?.status ?? null,
+            eventType: clientData?.eventType ?? null,
+            eventTypeOther: clientData?.eventTypeOther ?? null,
+            eventDate: clientData?.eventDate ?? null,
+            eventTime: clientData?.eventTime ?? null,
+            guestCount: clientData?.guestCount ?? null,
+            eventLocation: clientData?.eventLocation ?? null,
+            djPreference: clientData?.djPreference ?? null,
+          }
+        })
       }
     }
   }
