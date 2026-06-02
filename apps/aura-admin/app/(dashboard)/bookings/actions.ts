@@ -32,7 +32,9 @@ import {
 } from '@/lib/email'
 
 export type ActionResult = { success: true } | { success: false; error: string }
-export type SecondTokenResult = { success: true; link: string } | { success: false; error: string }
+export type SecondTokenResult =
+  | { success: true; link: string; emailSent: boolean }
+  | { success: false; error: string }
 
 // ─── Declinar segunda reserva ─────────────────────────────────────────────────
 
@@ -350,10 +352,10 @@ export async function createSecondBookingToken(raw: unknown): Promise<SecondToke
     .from(secondBookingTokens)
     .where(eq(secondBookingTokens.firstBookingId, data.firstBookingId))
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
   if (existing) {
-    return { success: true, link: `${appUrl}/book/segunda/${existing.token}` }
+    return { success: true, link: `${appUrl}/book/segunda/${existing.token}`, emailSent: false }
   }
 
   // Obtener info del cliente
@@ -379,16 +381,21 @@ export async function createSecondBookingToken(raw: unknown): Promise<SecondToke
 
   const link = `${appUrl}/book/segunda/${token}`
 
-  void sendSecondBookingLinkEmail({
-    clientName: client.name,
-    clientEmail: client.email,
-    djNames: djProfiles.map((p) => p.name),
-    link,
-  })
+  let emailSent = false
+  try {
+    emailSent = await sendSecondBookingLinkEmail({
+      clientName: client.name,
+      clientEmail: client.email,
+      djNames: djProfiles.map((p) => p.name),
+      link,
+    })
+  } catch (err) {
+    console.error('[createSecondBookingToken] email error:', err)
+  }
 
   revalidatePath('/bookings')
   revalidatePath('/dashboard')
-  return { success: true, link }
+  return { success: true, link, emailSent }
 }
 
 // ─── Crear segunda reserva (desde el link del cliente) ───────────────────────

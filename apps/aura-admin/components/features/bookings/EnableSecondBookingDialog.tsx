@@ -74,7 +74,13 @@ export function EnableSecondBookingDialog({
 
       if (result.success) {
         setGeneratedLink(result.link)
-        toast.success('Link generado y email enviado al cliente')
+        if (result.emailSent) {
+          toast.success('Link generado y email enviado al cliente')
+        } else {
+          toast.warning(
+            'Link generado, pero el email no pudo enviarse — copialo y envialo manualmente'
+          )
+        }
       } else {
         toast.error(result.error)
       }

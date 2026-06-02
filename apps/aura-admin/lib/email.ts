@@ -334,10 +334,16 @@ export interface SecondBookingLinkEmailData {
   link: string
 }
 
-/** Se envía al cliente cuando el coordinador habilita la segunda reserva. */
-export async function sendSecondBookingLinkEmail(data: SecondBookingLinkEmailData): Promise<void> {
+/**
+ * Se envía al cliente cuando el coordinador habilita la segunda reserva.
+ * Retorna true si el email fue enviado, false si RESEND_API_KEY no está configurada.
+ * Lanza un error si la API key existe pero Resend falla.
+ */
+export async function sendSecondBookingLinkEmail(
+  data: SecondBookingLinkEmailData
+): Promise<boolean> {
   const resend = getResend()
-  if (!resend) return
+  if (!resend) return false
 
   const djs = data.djNames.join(' &amp; ')
 
@@ -368,6 +374,7 @@ export async function sendSecondBookingLinkEmail(data: SecondBookingLinkEmailDat
       </p>`
     ),
   })
+  return true
 }
 
 // ─── Rechazo ─────────────────────────────────────────────────────────────────
