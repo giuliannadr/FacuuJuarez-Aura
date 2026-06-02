@@ -318,8 +318,12 @@ export async function createSecondBookingToken(raw: unknown): Promise<SecondToke
   const session = await getSession()
   if (!session) return { success: false, error: 'No autenticado' }
 
-  // Solo coordinadores pueden generar links de segunda reunión
-  if (!session.profile.isCoordinator) {
+  // Coordinadores, aura_admin y facundo pueden generar links de segunda reunión
+  const canManage =
+    session.profile.isCoordinator ||
+    session.profile.role === 'facundo' ||
+    session.profile.role === 'aura_admin'
+  if (!canManage) {
     return { success: false, error: 'Sin permisos para esta acción' }
   }
 
