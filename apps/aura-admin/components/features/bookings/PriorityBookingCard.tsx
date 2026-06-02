@@ -49,11 +49,11 @@ export function PriorityBookingCard({ booking, detail, allMembers }: PriorityBoo
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <button
             onClick={() => setShowDetail(true)}
             title="Ver detalle"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 dark:border-violet-500/20 text-violet-400 dark:text-violet-500 transition-colors hover:bg-violet-100 dark:hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-300"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-300 dark:border-white/20 bg-white dark:bg-white/10 text-zinc-500 dark:text-zinc-300 transition-colors hover:bg-zinc-50 dark:hover:bg-white/15 hover:text-zinc-700 dark:hover:text-white"
           >
             <Eye className="h-4 w-4" />
           </button>
