@@ -6,10 +6,11 @@ import { X, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateContact } from '@/app/(dashboard)/clients/actions'
 import type { ContactDetailData } from './ContactDetailModal'
+import { PhoneInput } from '@/components/ui/booking-inputs'
 import { cn } from '@/lib/utils'
 
 const inputCls =
-  'w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 transition-colors'
+  'w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500 transition-colors'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -119,12 +120,11 @@ export function EditContactDialog({ contact, open, onClose }: EditContactDialogP
                   className={inputCls}
                 />
               </Field>
-              <Field label="Teléfono">
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => set('phone', e.target.value)}
-                  className={inputCls}
+              <Field label="Teléfono / WhatsApp">
+                <PhoneInput
+                  onChange={(v) => set('phone', v)}
+                  inputClass={inputCls}
+                  defaultValue={form.phone}
                 />
               </Field>
             </div>
@@ -154,12 +154,11 @@ export function EditContactDialog({ contact, open, onClose }: EditContactDialogP
                   />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Teléfono">
-                    <input
-                      type="tel"
-                      value={form.parent1Phone}
-                      onChange={(e) => set('parent1Phone', e.target.value)}
-                      className={inputCls}
+                  <Field label="Teléfono / WhatsApp">
+                    <PhoneInput
+                      onChange={(v) => set('parent1Phone', v)}
+                      inputClass={inputCls}
+                      defaultValue={form.parent1Phone}
                     />
                   </Field>
                   <Field label="Email">
@@ -186,12 +185,11 @@ export function EditContactDialog({ contact, open, onClose }: EditContactDialogP
                   />
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
-                  <Field label="Teléfono">
-                    <input
-                      type="tel"
-                      value={form.parent2Phone}
-                      onChange={(e) => set('parent2Phone', e.target.value)}
-                      className={inputCls}
+                  <Field label="Teléfono / WhatsApp">
+                    <PhoneInput
+                      onChange={(v) => set('parent2Phone', v)}
+                      inputClass={inputCls}
+                      defaultValue={form.parent2Phone}
                     />
                   </Field>
                   <Field label="Email">
@@ -217,12 +215,11 @@ export function EditContactDialog({ contact, open, onClose }: EditContactDialogP
                     className={inputCls}
                   />
                 </Field>
-                <Field label="Teléfono">
-                  <input
-                    type="tel"
-                    value={form.birthdayPersonPhone}
-                    onChange={(e) => set('birthdayPersonPhone', e.target.value)}
-                    className={inputCls}
+                <Field label="Teléfono / WhatsApp">
+                  <PhoneInput
+                    onChange={(v) => set('birthdayPersonPhone', v)}
+                    inputClass={inputCls}
+                    defaultValue={form.birthdayPersonPhone}
                   />
                 </Field>
               </div>
