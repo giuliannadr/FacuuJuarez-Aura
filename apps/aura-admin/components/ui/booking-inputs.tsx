@@ -633,12 +633,12 @@ export function PhoneInput({ onChange, inputClass, defaultValue }: PhoneInputPro
   }
 
   return (
-    <div ref={containerRef} className="flex gap-2">
+    <div ref={containerRef} className="flex items-stretch gap-2">
       <div className="relative shrink-0">
         <button
           type="button"
           onClick={() => setDropOpen((v) => !v)}
-          className="flex items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-2 text-sm text-zinc-900 dark:text-white transition-colors hover:bg-zinc-50 dark:hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-white/20"
+          className="flex h-full items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-2 text-sm text-zinc-900 dark:text-white transition-colors hover:bg-zinc-50 dark:hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-zinc-300 dark:focus:ring-white/20"
         >
           <span className="text-base leading-none">{selected.flag}</span>
           <span className="min-w-[32px] text-xs font-medium text-zinc-500 dark:text-zinc-400">
