@@ -1,26 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  format,
-  parseISO,
-  startOfDay,
-  isBefore,
-  isToday,
-  isSameMonth,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  addMonths,
-  subMonths,
-} from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Check, ChevronLeft, ChevronRight, Loader2, CalendarDays, CalendarPlus } from 'lucide-react'
+import { Check, Loader2, CalendarDays, CalendarPlus } from 'lucide-react'
 import { createSecondBooking } from '@/app/(dashboard)/bookings/actions'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { BookingCalendar } from '@/components/ui/booking-inputs'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,114 +23,6 @@ interface SecondBookingFlowProps {
   clientName: string
   djNames: string[]
   availableSlots: AvailableSlot[]
-}
-
-// ─── Calendario ───────────────────────────────────────────────────────────────
-
-const DAY_HEADERS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
-
-function BookingCalendar({
-  availableDates,
-  selectedDate,
-  onSelectDate,
-}: {
-  availableDates: Set<string>
-  selectedDate: string | null
-  onSelectDate: (date: string) => void
-}) {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-
-  const monthStart = startOfMonth(currentMonth)
-  const monthEnd = endOfMonth(currentMonth)
-  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
-  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
-  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
-  const todayStart = startOfDay(new Date())
-  const isFirstMonth = isSameMonth(currentMonth, new Date())
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
-          disabled={isFirstMonth}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-semibold capitalize text-zinc-700 dark:text-zinc-200">
-          {format(currentMonth, 'MMMM yyyy', { locale: es })}
-        </span>
-        <button
-          type="button"
-          onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-200 dark:border-white/10 text-zinc-400 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7">
-        {DAY_HEADERS.map((d) => (
-          <div
-            key={d}
-            className="py-1 text-center text-[11px] font-medium text-zinc-400 dark:text-zinc-600"
-          >
-            {d}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-y-1">
-        {days.map((day) => {
-          const dateStr = format(day, 'yyyy-MM-dd')
-          const inMonth = isSameMonth(day, currentMonth)
-          const isPast = isBefore(day, todayStart)
-          const isAvail = availableDates.has(dateStr)
-          const isSelected = selectedDate === dateStr
-          const isTodayDate = isToday(day)
-
-          if (!inMonth) return <div key={dateStr} />
-
-          return (
-            <button
-              key={dateStr}
-              type="button"
-              onClick={() => !isPast && isAvail && onSelectDate(dateStr)}
-              disabled={isPast || !isAvail}
-              className={cn(
-                'relative mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all',
-                isPast && 'text-zinc-300 dark:text-zinc-700 cursor-not-allowed',
-                isAvail &&
-                  !isSelected &&
-                  !isPast &&
-                  'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/25 cursor-pointer',
-                isSelected && 'bg-violet-600 text-white shadow-sm',
-                !isAvail && !isPast && 'text-zinc-400 dark:text-zinc-500 cursor-not-allowed'
-              )}
-            >
-              {format(day, 'd')}
-              {isTodayDate && !isSelected && (
-                <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-violet-500" />
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="flex items-center gap-5 pt-1">
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-emerald-500/30 border border-emerald-500/40" />
-          <span className="text-xs text-zinc-400 dark:text-zinc-500">Disponible</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full bg-violet-600" />
-          <span className="text-xs text-zinc-400 dark:text-zinc-500">Seleccionado</span>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
