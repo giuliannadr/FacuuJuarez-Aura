@@ -122,9 +122,8 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
   const todayYear = new Date().getFullYear()
   const todayMonth = new Date().getMonth()
 
-  // Year range: from today's year (or earlier if lockPast=false) up to +5
-  const minYear = lockPast ? todayYear : todayYear - 2
-  const yearOptions = Array.from({ length: 6 }, (_, i) => minYear + i)
+  // Year range: always from current year forward (+8 years)
+  const yearOptions = Array.from({ length: 8 }, (_, i) => todayYear + i)
 
   const isAtMin = lockPast && currentYear === todayYear && currentMonthIdx <= todayMonth
 
