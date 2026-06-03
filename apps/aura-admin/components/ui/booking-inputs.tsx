@@ -122,8 +122,8 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
   const todayYear = new Date().getFullYear()
   const todayMonth = new Date().getMonth()
 
-  // Year range: always from current year forward (+8 years)
-  const yearOptions = Array.from({ length: 8 }, (_, i) => todayYear + i)
+  // 12 years forward from today's year (4 rows × 3 cols), dynamic
+  const yearOptions = Array.from({ length: 12 }, (_, i) => todayYear + i)
 
   const isAtMin = lockPast && currentYear === todayYear && currentMonthIdx <= todayMonth
 
@@ -251,17 +251,17 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
         </div>
       )}
 
-      {/* Year popup */}
+      {/* Year popup — same 3-col grid as months */}
       {popup === 'year' && (
-        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-40 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2">
-          <div className="flex flex-col gap-0.5">
+        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-56 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2">
+          <div className="grid grid-cols-3 gap-1">
             {yearOptions.map((year) => (
               <button
                 key={year}
                 type="button"
                 onClick={() => selectYear(year)}
                 className={cn(
-                  'rounded-lg px-3 py-2 text-sm font-medium text-center transition-colors',
+                  'rounded-lg px-2 py-2 text-xs font-medium text-center transition-colors',
                   year === currentYear
                     ? 'bg-violet-600 text-white'
                     : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
