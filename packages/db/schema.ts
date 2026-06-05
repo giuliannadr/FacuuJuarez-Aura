@@ -208,7 +208,10 @@ export const contacts = pgTable('contacts', {
   // Quinceañera — la festejada
   birthdayPersonName: text('birthday_person_name'),
   birthdayPersonPhone: text('birthday_person_phone'),
+  birthdayPersonBirthDate: date('birthday_person_birth_date'),
   notes: text('notes'),
+  /** true = posible cliente (lead), false = cliente confirmado */
+  isPotentialClient: boolean('is_potential_client').notNull().default(false),
   /** 'manual' = cargado a mano por admin | 'booking' = creado automáticamente al confirmar reserva */
   source: text('source').notNull().default('manual'),
   /** Referencia al clients row original si fue creado desde una reserva */
@@ -231,6 +234,10 @@ export const contactEvents = pgTable('contact_events', {
   guestCount: integer('guest_count'),
   eventLocation: text('event_location'),
   djPreference: text('dj_preference'),
+  /** Organizador/a del evento (si aplica) */
+  organizerName: text('organizer_name'),
+  organizerPhone: text('organizer_phone'),
+  organizerEmail: text('organizer_email'),
   notes: text('notes'),
   /** Reserva vinculada (primera o segunda reunión) */
   linkedBookingId: uuid('linked_booking_id').references(() => bookings.id, {

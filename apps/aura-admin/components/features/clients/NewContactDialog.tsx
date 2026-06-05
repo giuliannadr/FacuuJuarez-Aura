@@ -53,6 +53,47 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
   )
 }
 
+/** Simple on/off toggle switch */
+function Toggle({
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+  label: string
+  description?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between gap-4 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] px-4 py-3 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5"
+    >
+      <div className="text-left">
+        <p className="text-sm font-medium text-zinc-900 dark:text-white">{label}</p>
+        {description && (
+          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{description}</p>
+        )}
+      </div>
+      <div
+        className={cn(
+          'relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200',
+          checked ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-600'
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+            checked ? 'translate-x-4' : 'translate-x-0.5'
+          )}
+        />
+      </div>
+    </button>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function NewContactDialog() {
@@ -67,22 +108,27 @@ export function NewContactDialog() {
   const [isSendingLink, startSendLinkTransition] = useTransition()
 
   // Form state
+  const [isPotentialClient, setIsPotentialClient] = useState(false)
   const [eventType, setEventType] = useState('fiesta_15')
+  const [hasOrganizer, setHasOrganizer] = useState(false)
   const [savedName, setSavedName] = useState('')
   const [savedEmail, setSavedEmail] = useState('')
+
   const [form, setForm] = useState({
     name: '',
     email: '',
     phone: '',
-    // Quinceañera
+    // Quinceañera — festejada
+    birthdayPersonName: '',
+    birthdayPersonPhone: '',
+    birthdayPersonBirthDate: '',
+    // Quinceañera — padres
     parent1Name: '',
     parent1Phone: '',
     parent1Email: '',
     parent2Name: '',
     parent2Phone: '',
     parent2Email: '',
-    birthdayPersonName: '',
-    birthdayPersonPhone: '',
     notes: '',
     // Event
     eventTypeOther: '',
@@ -91,6 +137,9 @@ export function NewContactDialog() {
     guestCount: '',
     eventLocation: '',
     djPreference: '',
+    organizerName: '',
+    organizerPhone: '',
+    organizerEmail: '',
     eventNotes: '',
   })
 
@@ -100,27 +149,29 @@ export function NewContactDialog() {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  function handleOpen() {
-    setOpen(true)
+  function resetForm() {
     setStep('form')
     setNewContactId(null)
     setGeneratedLink(null)
     setCopiedLink(false)
     setSavedName('')
     setSavedEmail('')
+    setIsPotentialClient(false)
     setEventType('fiesta_15')
+    setHasOrganizer(false)
     setForm({
       name: '',
       email: '',
       phone: '',
+      birthdayPersonName: '',
+      birthdayPersonPhone: '',
+      birthdayPersonBirthDate: '',
       parent1Name: '',
       parent1Phone: '',
       parent1Email: '',
       parent2Name: '',
       parent2Phone: '',
       parent2Email: '',
-      birthdayPersonName: '',
-      birthdayPersonPhone: '',
       notes: '',
       eventTypeOther: '',
       eventDate: '',
@@ -128,8 +179,16 @@ export function NewContactDialog() {
       guestCount: '',
       eventLocation: '',
       djPreference: '',
+      organizerName: '',
+      organizerPhone: '',
+      organizerEmail: '',
       eventNotes: '',
     })
+  }
+
+  function handleOpen() {
+    resetForm()
+    setOpen(true)
   }
 
   function handleClose() {
@@ -137,29 +196,35 @@ export function NewContactDialog() {
   }
 
   function handleSubmit() {
-    if (!form.name.trim()) {
+    if (!isQuinceanera && !form.name.trim()) {
       toast.error('El nombre es obligatorio')
       return
     }
-    if (isQuinceanera && !form.parent1Name.trim()) {
-      toast.error('El nombre del padre/tutor 1 es obligatorio para quinceañera')
+    if (isQuinceanera && !form.parent1Name.trim() && !form.birthdayPersonName.trim()) {
+      toast.error('Ingresá al menos el nombre de la festejada o del padre/tutor 1')
       return
     }
 
     startTransition(async () => {
       const result = await createContact({
+        isPotentialClient,
         name: form.name,
         email: form.email || undefined,
         phone: form.phone || undefined,
+        // Quinceañera
+        birthdayPersonName: isQuinceanera ? form.birthdayPersonName || undefined : undefined,
+        birthdayPersonPhone: isQuinceanera ? form.birthdayPersonPhone || undefined : undefined,
+        birthdayPersonBirthDate: isQuinceanera
+          ? form.birthdayPersonBirthDate || undefined
+          : undefined,
         parent1Name: isQuinceanera ? form.parent1Name || undefined : undefined,
         parent1Phone: isQuinceanera ? form.parent1Phone || undefined : undefined,
         parent1Email: isQuinceanera ? form.parent1Email || undefined : undefined,
         parent2Name: isQuinceanera ? form.parent2Name || undefined : undefined,
         parent2Phone: isQuinceanera ? form.parent2Phone || undefined : undefined,
         parent2Email: isQuinceanera ? form.parent2Email || undefined : undefined,
-        birthdayPersonName: isQuinceanera ? form.birthdayPersonName || undefined : undefined,
-        birthdayPersonPhone: isQuinceanera ? form.birthdayPersonPhone || undefined : undefined,
         notes: form.notes || undefined,
+        // Event
         eventType,
         eventTypeOther: eventType === 'otro' ? form.eventTypeOther || undefined : undefined,
         eventDate: form.eventDate || undefined,
@@ -167,6 +232,9 @@ export function NewContactDialog() {
         guestCount: form.guestCount ? parseInt(form.guestCount) : undefined,
         eventLocation: form.eventLocation || undefined,
         djPreference: form.djPreference || undefined,
+        organizerName: hasOrganizer ? form.organizerName || undefined : undefined,
+        organizerPhone: hasOrganizer ? form.organizerPhone || undefined : undefined,
+        organizerEmail: hasOrganizer ? form.organizerEmail || undefined : undefined,
         eventNotes: form.eventNotes || undefined,
       })
 
@@ -228,7 +296,6 @@ export function NewContactDialog() {
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
           onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
-          {/* max-w-2xl = 672px — gives room for 3-col event type grid */}
           <div className="w-full max-w-2xl rounded-t-2xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex flex-col max-h-[90vh] shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between gap-4 px-6 pt-5 pb-4 border-b border-zinc-100 dark:border-white/5 shrink-0">
@@ -246,7 +313,15 @@ export function NewContactDialog() {
             {step === 'form' ? (
               <>
                 <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
-                  {/* ── Tipo de evento ─────────────────────────────────────── */}
+                  {/* ── Switch posible cliente ────────────────────────────── */}
+                  <Toggle
+                    checked={isPotentialClient}
+                    onChange={setIsPotentialClient}
+                    label="Posible cliente"
+                    description="Marcalo como lead si todavía no está confirmado"
+                  />
+
+                  {/* ── Tipo de evento ────────────────────────────────────── */}
                   <div>
                     <SectionTitle>Tipo de evento *</SectionTitle>
                     <EventTypeRadioGrid value={eventType} onChange={setEventType} />
@@ -266,43 +341,43 @@ export function NewContactDialog() {
 
                   <hr className="border-zinc-100 dark:border-white/5" />
 
-                  {/* ── Contacto principal ────────────────────────────────── */}
-                  <div className="space-y-4">
-                    <SectionTitle>
-                      {isQuinceanera ? 'Organizador / Responsable principal' : 'Datos del contacto'}
-                    </SectionTitle>
-
-                    <Field label="Nombre completo" required>
-                      <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => set('name', e.target.value)}
-                        placeholder="Juan Pérez"
-                        className={inputCls}
-                      />
-                    </Field>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Field label="Email">
-                        <input
-                          type="email"
-                          value={form.email}
-                          onChange={(e) => set('email', e.target.value)}
-                          placeholder="juan@email.com"
-                          className={inputCls}
-                        />
-                      </Field>
-                      <Field label="Teléfono / WhatsApp">
-                        <PhoneInput onChange={(v) => set('phone', v)} inputClass={inputCls} />
-                      </Field>
-                    </div>
-                  </div>
-
-                  {/* ── Quinceañera — padres ─────────────────────────────── */}
-                  {isQuinceanera && (
+                  {isQuinceanera ? (
                     <>
+                      {/* ── Quinceañera: festejada primero ───────────────── */}
+                      <div className="space-y-4">
+                        <SectionTitle className="text-violet-400 dark:text-violet-500">
+                          La festejada
+                        </SectionTitle>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <Field label="Nombre">
+                            <input
+                              type="text"
+                              value={form.birthdayPersonName}
+                              onChange={(e) => set('birthdayPersonName', e.target.value)}
+                              placeholder="Sofía García"
+                              className={inputCls}
+                            />
+                          </Field>
+                          <Field label="Fecha de nacimiento">
+                            <input
+                              type="date"
+                              value={form.birthdayPersonBirthDate}
+                              onChange={(e) => set('birthdayPersonBirthDate', e.target.value)}
+                              className={inputCls}
+                            />
+                          </Field>
+                        </div>
+                        <Field label="Teléfono / WhatsApp">
+                          <PhoneInput
+                            onChange={(v) => set('birthdayPersonPhone', v)}
+                            inputClass={inputCls}
+                          />
+                        </Field>
+                      </div>
+
                       <hr className="border-zinc-100 dark:border-white/5" />
 
+                      {/* ── Padre / Tutor 1 ──────────────────────────────── */}
                       <div className="space-y-4">
                         <SectionTitle>
                           Padre / Tutor 1{' '}
@@ -310,7 +385,6 @@ export function NewContactDialog() {
                             * requerido
                           </span>
                         </SectionTitle>
-
                         <Field label="Nombre" required>
                           <input
                             type="text"
@@ -320,7 +394,6 @@ export function NewContactDialog() {
                             className={inputCls}
                           />
                         </Field>
-
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <Field label="Teléfono / WhatsApp">
                             <PhoneInput
@@ -340,6 +413,7 @@ export function NewContactDialog() {
                         </div>
                       </div>
 
+                      {/* ── Padre / Tutor 2 ──────────────────────────────── */}
                       <div className="space-y-4">
                         <SectionTitle>
                           Padre / Tutor 2{' '}
@@ -347,7 +421,6 @@ export function NewContactDialog() {
                             opcional
                           </span>
                         </SectionTitle>
-
                         <Field label="Nombre">
                           <input
                             type="text"
@@ -357,7 +430,6 @@ export function NewContactDialog() {
                             className={inputCls}
                           />
                         </Field>
-
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <Field label="Teléfono / WhatsApp">
                             <PhoneInput
@@ -376,41 +448,45 @@ export function NewContactDialog() {
                           </Field>
                         </div>
                       </div>
-
-                      <div className="space-y-4">
-                        <SectionTitle className="text-violet-400 dark:text-violet-500">
-                          La festejada
-                        </SectionTitle>
-
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                          <Field label="Nombre">
-                            <input
-                              type="text"
-                              value={form.birthdayPersonName}
-                              onChange={(e) => set('birthdayPersonName', e.target.value)}
-                              placeholder="Sofía García"
-                              className={inputCls}
-                            />
-                          </Field>
-                          <Field label="Teléfono / WhatsApp">
-                            <PhoneInput
-                              onChange={(v) => set('birthdayPersonPhone', v)}
-                              inputClass={inputCls}
-                            />
-                          </Field>
-                        </div>
-                      </div>
                     </>
+                  ) : (
+                    /* ── Contacto general ────────────────────────────────── */
+                    <div className="space-y-4">
+                      <SectionTitle>Datos del contacto</SectionTitle>
+                      <Field label="Nombre completo" required>
+                        <input
+                          type="text"
+                          value={form.name}
+                          onChange={(e) => set('name', e.target.value)}
+                          placeholder="Juan Pérez"
+                          className={inputCls}
+                        />
+                      </Field>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Field label="Email">
+                          <input
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => set('email', e.target.value)}
+                            placeholder="juan@email.com"
+                            className={inputCls}
+                          />
+                        </Field>
+                        <Field label="Teléfono / WhatsApp">
+                          <PhoneInput onChange={(v) => set('phone', v)} inputClass={inputCls} />
+                        </Field>
+                      </div>
+                    </div>
                   )}
 
                   <hr className="border-zinc-100 dark:border-white/5" />
 
                   {/* ── Datos del evento ──────────────────────────────────── */}
                   <div className="space-y-4">
-                    <SectionTitle>Datos del evento</SectionTitle>
+                    <SectionTitle>Datos de la fiesta</SectionTitle>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <Field label="Fecha tentativa del evento">
+                      <Field label="Fecha tentativa">
                         <EventDatePicker
                           value={form.eventDate}
                           onChange={(v) => set('eventDate', v)}
@@ -457,6 +533,44 @@ export function NewContactDialog() {
                         className={inputCls}
                       />
                     </Field>
+
+                    {/* Organizador del evento */}
+                    <Toggle
+                      checked={hasOrganizer}
+                      onChange={setHasOrganizer}
+                      label="¿Tienen organizador/a de evento?"
+                    />
+
+                    {hasOrganizer && (
+                      <div className="space-y-4 rounded-lg border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-white/[0.02] p-4">
+                        <Field label="Nombre del organizador/a">
+                          <input
+                            type="text"
+                            value={form.organizerName}
+                            onChange={(e) => set('organizerName', e.target.value)}
+                            placeholder="Laura Martínez"
+                            className={inputCls}
+                          />
+                        </Field>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <Field label="Teléfono / WhatsApp">
+                            <PhoneInput
+                              onChange={(v) => set('organizerPhone', v)}
+                              inputClass={inputCls}
+                            />
+                          </Field>
+                          <Field label="Email">
+                            <input
+                              type="email"
+                              value={form.organizerEmail}
+                              onChange={(e) => set('organizerEmail', e.target.value)}
+                              placeholder="laura@eventos.com"
+                              className={inputCls}
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <Field label="Notas internas">
@@ -488,13 +602,14 @@ export function NewContactDialog() {
                 </div>
               </>
             ) : (
-              /* ── Step: action ──────────────────────────────────────────── */
+              /* ── Action step ────────────────────────────────────────────── */
               <>
                 <div className="flex-1 px-6 py-5 space-y-4">
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
                     <Check className="h-4 w-4 shrink-0 text-emerald-500" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                      Contacto <strong>{savedName}</strong> guardado correctamente
+                      {isPotentialClient ? 'Posible cliente' : 'Cliente'}{' '}
+                      <strong>{savedName}</strong> guardado correctamente
                     </p>
                   </div>
 
@@ -502,45 +617,43 @@ export function NewContactDialog() {
                     ¿Qué querés hacer ahora?
                   </p>
 
-                  <div className="space-y-2">
-                    {!generatedLink ? (
-                      <button
-                        onClick={handleSendLink}
-                        disabled={isSendingLink}
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 transition-colors hover:bg-violet-500/15 disabled:opacity-40"
-                      >
-                        {isSendingLink ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : savedEmail ? (
-                          'Enviar link de reserva por email'
-                        ) : (
-                          'Obtener link de reserva'
-                        )}
-                      </button>
-                    ) : (
-                      <div className="rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 p-3 space-y-2">
-                        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                          Link de reserva
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="flex-1 truncate text-xs font-mono text-zinc-600 dark:text-zinc-300">
-                            {generatedLink}
-                          </span>
-                          <button
-                            onClick={handleCopyLink}
-                            className="flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10"
-                          >
-                            {copiedLink ? (
-                              <Check className="h-3 w-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                            {copiedLink ? 'Copiado' : 'Copiar'}
-                          </button>
-                        </div>
+                  {!generatedLink ? (
+                    <button
+                      onClick={handleSendLink}
+                      disabled={isSendingLink}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 transition-colors hover:bg-violet-500/15 disabled:opacity-40"
+                    >
+                      {isSendingLink ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : savedEmail ? (
+                        'Enviar link de reserva por email'
+                      ) : (
+                        'Obtener link de reserva'
+                      )}
+                    </button>
+                  ) : (
+                    <div className="rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 p-3 space-y-2">
+                      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                        Link de reserva
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 truncate text-xs font-mono text-zinc-600 dark:text-zinc-300">
+                          {generatedLink}
+                        </span>
+                        <button
+                          onClick={handleCopyLink}
+                          className="flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 transition-colors hover:bg-zinc-100 dark:hover:bg-white/10"
+                        >
+                          {copiedLink ? (
+                            <Check className="h-3 w-3 text-emerald-500" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                          {copiedLink ? 'Copiado' : 'Copiar'}
+                        </button>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="px-6 py-4 border-t border-zinc-100 dark:border-white/5 shrink-0">

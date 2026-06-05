@@ -18,6 +18,7 @@ function assertAdmin(role: string): boolean {
 
 export interface CreateContactInput {
   // Contact personal data
+  isPotentialClient?: boolean
   name: string
   email?: string
   phone?: string
@@ -30,6 +31,7 @@ export interface CreateContactInput {
   parent2Email?: string
   birthdayPersonName?: string
   birthdayPersonPhone?: string
+  birthdayPersonBirthDate?: string
   notes?: string
   // Event data (for first contactEvent)
   eventType: string
@@ -39,6 +41,9 @@ export interface CreateContactInput {
   guestCount?: number
   eventLocation?: string
   djPreference?: string
+  organizerName?: string
+  organizerPhone?: string
+  organizerEmail?: string
   eventNotes?: string
 }
 
@@ -51,11 +56,18 @@ export async function createContact(
 
   const context = session.profile.role === 'facundo' ? 'facundo_solo' : 'aura'
 
+  // Para quinceañera, si no se provee name explícito usar parent1Name
+  const contactName =
+    input.name.trim() ||
+    input.parent1Name?.trim() ||
+    input.birthdayPersonName?.trim() ||
+    'Sin nombre'
+
   const [contact] = await db
     .insert(contacts)
     .values({
       context,
-      name: input.name.trim(),
+      name: contactName,
       email: input.email?.trim() || null,
       phone: input.phone?.trim() || null,
       parent1Name: input.parent1Name?.trim() || null,
@@ -66,7 +78,9 @@ export async function createContact(
       parent2Email: input.parent2Email?.trim() || null,
       birthdayPersonName: input.birthdayPersonName?.trim() || null,
       birthdayPersonPhone: input.birthdayPersonPhone?.trim() || null,
+      birthdayPersonBirthDate: input.birthdayPersonBirthDate || null,
       notes: input.notes?.trim() || null,
+      isPotentialClient: input.isPotentialClient ?? false,
       source: 'manual',
     })
     .returning()
@@ -83,6 +97,9 @@ export async function createContact(
       guestCount: input.guestCount ?? null,
       eventLocation: input.eventLocation?.trim() || null,
       djPreference: input.djPreference?.trim() || null,
+      organizerName: input.organizerName?.trim() || null,
+      organizerPhone: input.organizerPhone?.trim() || null,
+      organizerEmail: input.organizerEmail?.trim() || null,
       notes: input.eventNotes?.trim() || null,
     })
     .returning()
@@ -95,6 +112,7 @@ export async function createContact(
 
 export interface UpdateContactInput {
   contactId: string
+  isPotentialClient?: boolean
   name?: string
   email?: string
   phone?: string
@@ -106,6 +124,7 @@ export interface UpdateContactInput {
   parent2Email?: string
   birthdayPersonName?: string
   birthdayPersonPhone?: string
+  birthdayPersonBirthDate?: string
   notes?: string
 }
 
@@ -130,7 +149,9 @@ export async function updateContact(input: UpdateContactInput): Promise<ActionRe
       parent2Email: input.parent2Email?.trim() || null,
       birthdayPersonName: input.birthdayPersonName?.trim() || null,
       birthdayPersonPhone: input.birthdayPersonPhone?.trim() || null,
+      birthdayPersonBirthDate: input.birthdayPersonBirthDate || null,
       notes: input.notes?.trim() || null,
+      ...(input.isPotentialClient !== undefined && { isPotentialClient: input.isPotentialClient }),
       updatedAt: new Date(),
     })
     .where(and(eq(contacts.id, input.contactId), eq(contacts.context, context)))
@@ -150,6 +171,9 @@ export interface UpdateContactEventInput {
   guestCount?: number | null
   eventLocation?: string
   djPreference?: string
+  organizerName?: string
+  organizerPhone?: string
+  organizerEmail?: string
   notes?: string
 }
 
@@ -168,6 +192,9 @@ export async function updateContactEvent(input: UpdateContactEventInput): Promis
       guestCount: input.guestCount ?? null,
       eventLocation: input.eventLocation?.trim() || null,
       djPreference: input.djPreference?.trim() || null,
+      organizerName: input.organizerName?.trim() || null,
+      organizerPhone: input.organizerPhone?.trim() || null,
+      organizerEmail: input.organizerEmail?.trim() || null,
       notes: input.notes?.trim() || null,
       updatedAt: new Date(),
     })

@@ -12,6 +12,7 @@ export interface ContactDetailData {
   name: string
   email: string | null
   phone: string | null
+  isPotentialClient: boolean
   parent1Name: string | null
   parent1Phone: string | null
   parent1Email: string | null
@@ -20,6 +21,7 @@ export interface ContactDetailData {
   parent2Email: string | null
   birthdayPersonName: string | null
   birthdayPersonPhone: string | null
+  birthdayPersonBirthDate: string | null
   notes: string | null
   source: string
   createdAt: Date
@@ -33,6 +35,9 @@ export interface ContactDetailData {
     guestCount: number | null
     eventLocation: string | null
     djPreference: string | null
+    organizerName: string | null
+    organizerPhone: string | null
+    organizerEmail: string | null
     notes: string | null
     createdAt: Date
   }>
@@ -184,6 +189,14 @@ export function ContactDetailModal({ contact, open, onClose }: ContactDetailModa
                     La festejada
                   </p>
                   <Row label="" value={contact.birthdayPersonName} />
+                  {contact.birthdayPersonBirthDate && (
+                    <Row
+                      label="Fecha de nacimiento"
+                      value={format(parseISO(contact.birthdayPersonBirthDate), "d 'de' MMMM yyyy", {
+                        locale: es,
+                      })}
+                    />
+                  )}
                   {contact.birthdayPersonPhone && (
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3 text-violet-400 shrink-0" />
@@ -255,6 +268,12 @@ export function ContactDetailModal({ contact, open, onClose }: ContactDetailModa
                             {ev.djPreference}
                           </span>
                         </div>
+                      )}
+                      {ev.organizerName && (
+                        <Row
+                          label="Organizador/a"
+                          value={`${ev.organizerName}${ev.organizerPhone ? ` · ${ev.organizerPhone}` : ''}${ev.organizerEmail ? ` · ${ev.organizerEmail}` : ''}`}
+                        />
                       )}
                       {ev.notes && <Row label="Notas" value={ev.notes} />}
                     </dl>
