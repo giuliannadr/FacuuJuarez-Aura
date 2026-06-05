@@ -160,9 +160,19 @@ export async function deleteEntry(entryId: string, databaseId: string): Promise<
 
 // ─── Generar token de exportación (48h) ──────────────────────────────────────
 
+function formatExpiry(d: Date): string {
+  return new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+}
+
 export async function generateExportToken(
   databaseId: string
-): Promise<ActionResult & { url?: string }> {
+): Promise<ActionResult & { url?: string; expiresLabel?: string }> {
   const session = await getSession()
   if (!session) return { success: false, error: 'No autenticado' }
   if (!assertAdmin(session.profile.role)) return { success: false, error: 'Sin permisos' }
@@ -173,5 +183,70 @@ export async function generateExportToken(
   await db.insert(exportTokens).values({ databaseId, token, expiresAt })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  return { success: true, url: `${appUrl}/export/${token}` }
+  return {
+    success: true,
+    url: `${appUrl}/export/${token}`,
+    expiresLabel: formatExpiry(expiresAt),
+  }
+}
+
+// ─── Enviar exportación por email (48h) ──────────────────────────────────────
+
+export type SendExportResult =
+  | { success: true; emailSent: boolean }
+  | { success: false; error: string }
+
+export async function sendExportByEmail(
+  databaseId: string,
+  email: string
+): Promise<SendExportResult> {
+  const session = await getSession()
+  if (!session) return { success: false, error: 'No autenticado' }
+  if (!assertAdmin(session.profile.role)) return { success: false, error: 'Sin permisos' }
+
+  const trimmed = email.trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { success: false, error: 'Email inválido' }
+  }
+
+  const context = getContext(session.profile.role)
+  const [database] = await db
+    .select()
+    .from(eventDatabases)
+    .where(and(eq(eventDatabases.id, databaseId), eq(eventDatabases.context, context)))
+    .limit(1)
+
+  if (!database) return { success: false, error: 'Base de datos no encontrada' }
+
+  // Contar registros
+  const entries = await db
+    .select({ id: eventDatabaseEntries.id })
+    .from(eventDatabaseEntries)
+    .where(eq(eventDatabaseEntries.databaseId, databaseId))
+
+  // Crear token
+  const token = crypto.randomUUID()
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000)
+  await db.insert(exportTokens).values({ databaseId, token, expiresAt })
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const link = `${appUrl}/export/${token}`
+
+  let emailSent = false
+  try {
+    const { sendDatabaseExportEmail } = await import('@/lib/email')
+    emailSent = await sendDatabaseExportEmail({
+      to: trimmed,
+      databaseName: database.name,
+      eventDate: database.eventDate,
+      entryCount: entries.length,
+      link,
+      expiresLabel: formatExpiry(expiresAt),
+    })
+  } catch (err) {
+    console.error('[sendExportByEmail] email error:', err)
+    return { success: false, error: 'No se pudo enviar el email. Intentá de nuevo.' }
+  }
+
+  return { success: true, emailSent }
 }

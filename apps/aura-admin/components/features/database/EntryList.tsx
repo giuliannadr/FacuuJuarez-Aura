@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, Pencil, Loader2, X, Check, Copy, Download, Link2 } from 'lucide-react'
+import { Plus, Trash2, Pencil, Loader2, X, Check, Copy, Share2, Mail, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   createEntry,
   updateEntry,
   deleteEntry,
   generateExportToken,
+  sendExportByEmail,
 } from '@/app/(dashboard)/database/actions'
 import type { TemplateGroup, FieldDef } from '@/lib/database-schema'
 import { PhoneInput, EventDatePicker } from '@/components/ui/booking-inputs'
@@ -266,9 +267,7 @@ export function EntryList({ databaseId, schema, entries }: EntryListProps) {
   const [showAdd, setShowAdd] = useState(false)
   const [editEntry, setEditEntry] = useState<Entry | null>(null)
   const [isDeleting, startDeleteTransition] = useTransition()
-  const [exportUrl, setExportUrl] = useState<string | null>(null)
-  const [copiedExport, setCopiedExport] = useState(false)
-  const [isExporting, startExportTransition] = useTransition()
+  const [showExport, setShowExport] = useState(false)
 
   function handleDelete(entry: Entry) {
     if (!confirm('¿Eliminar este registro?')) return
@@ -279,25 +278,6 @@ export function EntryList({ databaseId, schema, entries }: EntryListProps) {
         router.refresh()
       } else toast.error(r.error)
     })
-  }
-
-  function handleExport() {
-    startExportTransition(async () => {
-      const r = await generateExportToken(databaseId)
-      if (r.success && r.url) {
-        setExportUrl(r.url)
-      } else if (!r.success) {
-        toast.error(r.error)
-      }
-    })
-  }
-
-  async function handleCopyExport() {
-    if (!exportUrl) return
-    await navigator.clipboard.writeText(exportUrl)
-    setCopiedExport(true)
-    toast.success('Link copiado')
-    setTimeout(() => setCopiedExport(false), 2000)
   }
 
   // Find phone fields in schema for WhatsApp buttons
@@ -328,41 +308,14 @@ export function EntryList({ databaseId, schema, entries }: EntryListProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {/* Export */}
           {entries.length > 0 && (
-            <>
-              {exportUrl ? (
-                <div className="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 pl-3 pr-1.5 py-1.5">
-                  <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 max-w-[160px] truncate">
-                    {exportUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                  <button
-                    onClick={handleCopyExport}
-                    className="flex items-center gap-1 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
-                  >
-                    {copiedExport ? (
-                      <Check className="h-3 w-3 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                    {copiedExport ? 'Copiado' : 'Copiar'}
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors disabled:opacity-40"
-                >
-                  {isExporting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Link2 className="h-3.5 w-3.5" />
-                  )}
-                  Exportar (48h)
-                </button>
-              )}
-            </>
+            <button
+              onClick={() => setShowExport(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 px-3 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Exportar
+            </button>
           )}
           <button
             onClick={() => setShowAdd(true)}
@@ -460,6 +413,171 @@ export function EntryList({ databaseId, schema, entries }: EntryListProps) {
           onClose={() => setEditEntry(null)}
         />
       )}
+
+      {showExport && <ExportModal databaseId={databaseId} onClose={() => setShowExport(false)} />}
+    </div>
+  )
+}
+
+// ─── Export modal ─────────────────────────────────────────────────────────────
+
+function ExportModal({ databaseId, onClose }: { databaseId: string; onClose: () => void }) {
+  const [link, setLink] = useState<string | null>(null)
+  const [expiresLabel, setExpiresLabel] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [email, setEmail] = useState('')
+  const [isLinking, startLinkTransition] = useTransition()
+  const [isSending, startSendTransition] = useTransition()
+
+  function handleGenerateLink() {
+    startLinkTransition(async () => {
+      const r = await generateExportToken(databaseId)
+      if (r.success && r.url) {
+        setLink(r.url)
+        setExpiresLabel(r.expiresLabel ?? null)
+      } else if (!r.success) {
+        toast.error(r.error)
+      }
+    })
+  }
+
+  async function handleCopy() {
+    if (!link) return
+    await navigator.clipboard.writeText(link)
+    setCopied(true)
+    toast.success('Link copiado')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleSendEmail() {
+    if (!email.trim()) {
+      toast.error('Ingresá un email')
+      return
+    }
+    startSendTransition(async () => {
+      const r = await sendExportByEmail(databaseId, email)
+      if (r.success) {
+        if (r.emailSent) {
+          toast.success(`Enviado a ${email}`)
+          setEmail('')
+        } else {
+          toast.warning('No se pudo enviar el email (falta configuración). Usá el link.')
+        }
+      } else {
+        toast.error(r.error)
+      }
+    })
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-md rounded-t-2xl sm:rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl">
+        <div className="flex items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-zinc-100 dark:border-white/5">
+          <h3 className="font-semibold text-zinc-900 dark:text-white text-base">
+            Exportar base de datos
+          </h3>
+          <button
+            onClick={onClose}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-5 space-y-5">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 px-3 py-2.5">
+            <Clock className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Los links de exportación vencen a las <strong>48 horas</strong> por seguridad.
+            </p>
+          </div>
+
+          {/* ── Opción 1: link ────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              Compartir con link
+            </p>
+            {link ? (
+              <>
+                <div className="flex items-center gap-2 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 px-3 py-2">
+                  <span className="flex-1 truncate text-xs font-mono text-zinc-600 dark:text-zinc-300">
+                    {link}
+                  </span>
+                  <button
+                    onClick={handleCopy}
+                    className="flex shrink-0 items-center gap-1.5 rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors"
+                  >
+                    {copied ? (
+                      <Check className="h-3 w-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                    {copied ? 'Copiado' : 'Copiar'}
+                  </button>
+                </div>
+                {expiresLabel && (
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
+                    Válido hasta el {expiresLabel}
+                  </p>
+                )}
+              </>
+            ) : (
+              <button
+                onClick={handleGenerateLink}
+                disabled={isLinking}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 dark:border-white/10 px-4 py-2.5 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors disabled:opacity-40"
+              >
+                {isLinking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Generar link'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-zinc-100 dark:bg-white/5" />
+            <span className="text-[11px] font-medium text-zinc-400 dark:text-zinc-600">o</span>
+            <div className="h-px flex-1 bg-zinc-100 dark:bg-white/5" />
+          </div>
+
+          {/* ── Opción 2: email ───────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+              Enviar por email
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendEmail()}
+                  placeholder="destinatario@email.com"
+                  className="w-full rounded-md border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 pl-9 pr-3 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                />
+              </div>
+              <button
+                onClick={handleSendEmail}
+                disabled={isSending || !email.trim()}
+                className="flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-40 transition-colors shrink-0"
+              >
+                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-zinc-100 dark:border-white/5">
+          <button
+            onClick={onClose}
+            className="w-full rounded-lg border border-zinc-200 dark:border-white/10 px-4 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -462,3 +462,63 @@ export async function sendInviteMemberEmail(data: InviteMemberEmailData): Promis
     ),
   })
 }
+
+// ─── Email de exportación de base de datos ────────────────────────────────────
+
+export interface DatabaseExportEmailData {
+  to: string
+  databaseName: string
+  eventDate?: string | null
+  entryCount: number
+  link: string
+  /** Texto ya formateado, ej: "5 de junio de 2026 a las 18:30" */
+  expiresLabel: string
+}
+
+/**
+ * Envía el link de exportación de una base de datos a un email.
+ * Retorna true si se envió, false si RESEND_API_KEY no está configurada.
+ * Lanza un error si la API key existe pero Resend falla.
+ */
+export async function sendDatabaseExportEmail(data: DatabaseExportEmailData): Promise<boolean> {
+  const resend = getResend()
+  if (!resend) return false
+
+  const dateLine = data.eventDate
+    ? `<p style="margin:2px 0 0;font-size:13px;color:${TEXT_MID};font-family:system-ui,-apple-system,sans-serif">${formatDateES(data.eventDate)}</p>`
+    : ''
+
+  await resend.emails.send({
+    from: FROM,
+    to: data.to,
+    subject: `Base de datos: ${data.databaseName} — AURA`,
+    html: layout(
+      `Te compartieron la base de datos "${data.databaseName}"`,
+      `${greeting('👋')}
+      ${statusBadge('Exportación', VIOLET, VIOLET_LIGHT, VIOLET_BORDER)}
+      ${bodyText('Te compartieron el acceso a una base de datos de AURA. Hacé click en el botón para verla, descargar el CSV y contactar a cada persona por WhatsApp.')}
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${VIOLET_LIGHT};border:1px solid ${VIOLET_BORDER};border-radius:12px;margin:24px 0">
+        <tr>
+          <td style="padding:20px 24px">
+            <p style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:${TEXT_LIGHT};font-family:system-ui,-apple-system,sans-serif;font-weight:600">Base de datos</p>
+            <p style="margin:2px 0 0;font-size:17px;font-weight:700;color:${TEXT_DARK};font-family:system-ui,-apple-system,sans-serif">${data.databaseName}</p>
+            ${dateLine}
+            <p style="margin:10px 0 0;font-size:13px;color:${TEXT_MID};font-family:system-ui,-apple-system,sans-serif">${data.entryCount} registro${data.entryCount !== 1 ? 's' : ''}</p>
+          </td>
+        </tr>
+      </table>
+
+      ${ctaButton(data.link, 'Ver base de datos')}
+      ${divider()}
+      <p style="margin:0 0 8px;font-size:13px;color:${TEXT_LIGHT};font-family:system-ui,-apple-system,sans-serif">
+        ⚠️ Este link es válido <strong>hasta el ${data.expiresLabel}</strong> (48 horas). Después de eso vas a necesitar uno nuevo.
+      </p>
+      <p style="margin:0;font-size:12px;color:${TEXT_LIGHT};text-align:center;font-family:system-ui,-apple-system,sans-serif;word-break:break-all">
+        ¿El botón no funciona? Copiá este link:<br/>
+        <span style="color:${VIOLET}">${data.link}</span>
+      </p>`
+    ),
+  })
+  return true
+}
