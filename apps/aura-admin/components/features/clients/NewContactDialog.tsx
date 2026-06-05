@@ -361,11 +361,11 @@ export function NewContactDialog() {
                             />
                           </Field>
                           <Field label="Fecha de nacimiento">
-                            <input
-                              type="date"
+                            <EventDatePicker
                               value={form.birthdayPersonBirthDate}
-                              onChange={(e) => set('birthdayPersonBirthDate', e.target.value)}
-                              className={inputCls}
+                              onChange={(v) => set('birthdayPersonBirthDate', v)}
+                              inputClass={inputCls}
+                              allowPast
                             />
                           </Field>
                         </div>

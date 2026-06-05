@@ -122,8 +122,10 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
   const todayYear = new Date().getFullYear()
   const todayMonth = new Date().getMonth()
 
-  // 12 years forward from today's year (4 rows × 3 cols), dynamic
-  const yearOptions = Array.from({ length: 12 }, (_, i) => todayYear + i)
+  // When locked to future: 12 years forward. When past allowed: 15 past + 5 forward
+  const yearOptions = lockPast
+    ? Array.from({ length: 12 }, (_, i) => todayYear + i)
+    : Array.from({ length: 20 }, (_, i) => todayYear - 15 + i)
 
   const isAtMin = lockPast && currentYear === todayYear && currentMonthIdx <= todayMonth
 
@@ -384,9 +386,16 @@ interface EventDatePickerProps {
   value: string
   onChange: (v: string) => void
   inputClass: string
+  /** Allow selecting past dates (e.g. for birthdates). Default: false */
+  allowPast?: boolean
 }
 
-export function EventDatePicker({ value, onChange, inputClass }: EventDatePickerProps) {
+export function EventDatePicker({
+  value,
+  onChange,
+  inputClass,
+  allowPast = false,
+}: EventDatePickerProps) {
   const [open, setOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(value ? parseISO(value) : new Date())
   const containerRef = useRef<HTMLDivElement>(null)
@@ -445,7 +454,11 @@ export function EventDatePicker({ value, onChange, inputClass }: EventDatePicker
 
       {open && (
         <div className="absolute left-0 top-full z-40 mt-1.5 w-full min-w-[288px] rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-4 shadow-2xl">
-          <CalendarNav currentMonth={currentMonth} onChange={setCurrentMonth} />
+          <CalendarNav
+            currentMonth={currentMonth}
+            onChange={setCurrentMonth}
+            lockPast={!allowPast}
+          />
 
           <div className="mb-1 mt-3 grid grid-cols-7">
             {DAY_HEADERS.map((d) => (
@@ -463,6 +476,7 @@ export function EventDatePicker({ value, onChange, inputClass }: EventDatePicker
               const dateStr = format(day, 'yyyy-MM-dd')
               const inMonth = isSameMonth(day, currentMonth)
               const isPast = isBefore(day, todayStart)
+              const isDisabled = isPast && !allowPast
               const isSelected = value === dateStr
               const isTodayDate = isToday(day)
 
@@ -472,19 +486,19 @@ export function EventDatePicker({ value, onChange, inputClass }: EventDatePicker
                 <button
                   key={dateStr}
                   type="button"
-                  disabled={isPast}
+                  disabled={isDisabled}
                   onClick={() => {
                     onChange(dateStr)
                     setOpen(false)
                   }}
                   className={cn(
                     'relative mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-all',
-                    isPast && 'cursor-not-allowed text-zinc-300 dark:text-zinc-700',
-                    !isPast &&
+                    isDisabled && 'cursor-not-allowed text-zinc-300 dark:text-zinc-700',
+                    !isDisabled &&
                       !isSelected &&
                       'cursor-pointer text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10',
                     isSelected && 'bg-violet-600 text-white shadow-sm',
-                    isTodayDate && !isSelected && !isPast && 'font-bold'
+                    isTodayDate && !isSelected && !isDisabled && 'font-bold'
                   )}
                 >
                   {format(day, 'd')}
