@@ -147,16 +147,11 @@ export default async function ClientsPage() {
     })),
   }))
 
-  const clients = contactData.filter((c) => !c.isPotentialClient)
-  const leads = contactData.filter((c) => c.isPotentialClient)
-
-  const clientGroups = buildKanbanGroups(clients)
-  const leadGroups = buildKanbanGroups(leads)
-
+  const groups = buildKanbanGroups(contactData)
   const totalCount = contactData.length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -164,7 +159,7 @@ export default async function ClientsPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
             {totalCount === 0
               ? 'Sin contactos todavía'
-              : `${clients.length} cliente${clients.length !== 1 ? 's' : ''} · ${leads.length} posible${leads.length !== 1 ? 's' : ''}`}
+              : `${totalCount} contacto${totalCount !== 1 ? 's' : ''}`}
           </p>
         </div>
         <NewContactDialog />
@@ -181,35 +176,7 @@ export default async function ClientsPage() {
           </p>
         </div>
       ) : (
-        <>
-          {/* ── Clientes ─────────────────────────────────────────────── */}
-          {clients.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">Clientes</h2>
-                <span className="text-xs text-zinc-400 dark:text-zinc-600 bg-zinc-100 dark:bg-white/5 rounded-full px-2 py-0.5 font-medium">
-                  {clients.length}
-                </span>
-              </div>
-              <KanbanBoard groups={clientGroups} />
-            </section>
-          )}
-
-          {/* ── Posibles clientes ─────────────────────────────────────── */}
-          {leads.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
-                  Posibles clientes
-                </h2>
-                <span className="text-xs text-zinc-400 dark:text-zinc-600 bg-zinc-100 dark:bg-white/5 rounded-full px-2 py-0.5 font-medium">
-                  {leads.length}
-                </span>
-              </div>
-              <KanbanBoard groups={leadGroups} />
-            </section>
-          )}
-        </>
+        <KanbanBoard groups={groups} />
       )}
     </div>
   )

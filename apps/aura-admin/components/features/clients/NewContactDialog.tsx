@@ -110,7 +110,6 @@ export function NewContactDialog() {
   const [isSendingLink, startSendLinkTransition] = useTransition()
 
   // Form state
-  const [isPotentialClient, setIsPotentialClient] = useState(false)
   const [eventType, setEventType] = useState('fiesta_15')
   const [hasOrganizer, setHasOrganizer] = useState(false)
   const [savedName, setSavedName] = useState('')
@@ -158,7 +157,6 @@ export function NewContactDialog() {
     setCopiedLink(false)
     setSavedName('')
     setSavedEmail('')
-    setIsPotentialClient(false)
     setEventType('fiesta_15')
     setHasOrganizer(false)
     setForm({
@@ -209,7 +207,6 @@ export function NewContactDialog() {
 
     startTransition(async () => {
       const result = await createContact({
-        isPotentialClient,
         name: form.name,
         email: form.email || undefined,
         phone: form.phone || undefined,
@@ -315,14 +312,6 @@ export function NewContactDialog() {
             {step === 'form' ? (
               <>
                 <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
-                  {/* ── Switch posible cliente ────────────────────────────── */}
-                  <Toggle
-                    checked={isPotentialClient}
-                    onChange={setIsPotentialClient}
-                    label="Posible cliente"
-                    description="Marcalo como lead si todavía no está confirmado"
-                  />
-
                   {/* ── Tipo de evento ────────────────────────────────────── */}
                   <div>
                     <SectionTitle>Tipo de evento *</SectionTitle>
@@ -610,8 +599,7 @@ export function NewContactDialog() {
                   <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
                     <Check className="h-4 w-4 shrink-0 text-emerald-500" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                      {isPotentialClient ? 'Posible cliente' : 'Cliente'}{' '}
-                      <strong>{savedName}</strong> guardado correctamente
+                      Cliente <strong>{savedName}</strong> guardado correctamente
                     </p>
                   </div>
 
