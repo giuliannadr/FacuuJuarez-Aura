@@ -13,6 +13,7 @@ import {
   integer,
   jsonb,
 } from 'drizzle-orm/pg-core'
+import type { TemplateGroup } from './database-types'
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 export const userRoleEnum = pgEnum('user_role', ['facundo', 'aura_admin', 'aura_member'])
@@ -247,6 +248,43 @@ export const contactEvents = pgTable('contact_events', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// ─── Event Databases (CRM de eventos) ────────────────────────────────────────
+
+/** Carpeta/base de datos de un evento. El schema JSONB define los campos del formulario. */
+export const eventDatabases = pgTable('event_databases', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  context: bookingContextEnum('context').notNull(),
+  name: text('name').notNull(),
+  eventDate: date('event_date'),
+  /** Array de TemplateGroup: [{ id, name, fields: [{ id, type, label, required }] }] */
+  schema: jsonb('schema').notNull().default('[]').$type<TemplateGroup[]>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
+})
+
+export const eventDatabaseEntries = pgTable('event_database_entries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  databaseId: uuid('database_id')
+    .notNull()
+    .references(() => eventDatabases.id, { onDelete: 'cascade' }),
+  /** ID de la plantilla usada para este registro */
+  templateId: text('template_id'),
+  /** Datos del registro: { [fieldId]: value } */
+  data: jsonb('data').notNull().default('{}').$type<Record<string, string>>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const exportTokens = pgTable('export_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  databaseId: uuid('database_id')
+    .notNull()
+    .references(() => eventDatabases.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
 // ─── Events ───────────────────────────────────────────────────────────────────
 export const events = pgTable('events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -362,6 +400,11 @@ export type EventComment = typeof eventComments.$inferSelect
 export type NewEventComment = typeof eventComments.$inferInsert
 export type ScheduleTemplateDay = typeof scheduleTemplateDays.$inferSelect
 export type SlotLock = typeof slotLocks.$inferSelect
+export type EventDatabase = typeof eventDatabases.$inferSelect
+export type NewEventDatabase = typeof eventDatabases.$inferInsert
+export type EventDatabaseEntry = typeof eventDatabaseEntries.$inferSelect
+export type NewEventDatabaseEntry = typeof eventDatabaseEntries.$inferInsert
+export type ExportToken = typeof exportTokens.$inferSelect
 export type Contact = typeof contacts.$inferSelect
 export type NewContact = typeof contacts.$inferInsert
 export type ContactEvent = typeof contactEvents.$inferSelect

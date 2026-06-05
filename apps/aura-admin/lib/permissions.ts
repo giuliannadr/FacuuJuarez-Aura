@@ -9,6 +9,7 @@ export const ROLE_PERMISSIONS = {
     canViewMergedCalendar: true,
     canManageEvents: true, // crea y edita eventos de ambos contextos
     canManageClients: true,
+    canManageDatabase: true,
   },
   aura_admin: {
     canEditFacundoContent: false,
@@ -18,6 +19,7 @@ export const ROLE_PERMISSIONS = {
     canViewMergedCalendar: false,
     canManageEvents: true, // solo eventos de AURA
     canManageClients: true,
+    canManageDatabase: true,
   },
   aura_member: {
     canEditFacundoContent: false,
@@ -27,6 +29,7 @@ export const ROLE_PERMISSIONS = {
     canViewMergedCalendar: false,
     canManageEvents: false,
     canManageClients: false,
+    canManageDatabase: false,
   },
 } as const
 
@@ -78,6 +81,12 @@ export const NAV_ITEMS = [
     label: 'Clientes',
     href: '/clients',
     icon: 'UserRound',
+    roles: ['facundo', 'aura_admin'] as Role[],
+  },
+  {
+    label: 'Base de datos',
+    href: '/database',
+    icon: 'Database',
     roles: ['facundo', 'aura_admin'] as Role[],
   },
   {
