@@ -1,7 +1,7 @@
 'use client'
 
 import { Download } from 'lucide-react'
-import type { TemplateGroup } from '@aura/db'
+import type { TemplateGroup } from '@/lib/database-schema'
 
 interface Props {
   database: { name: string }

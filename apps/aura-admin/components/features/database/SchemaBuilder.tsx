@@ -14,8 +14,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { saveEventDatabaseSchema } from '@/app/(dashboard)/database/actions'
-import type { TemplateGroup, FieldDef, FieldType } from '@aura/db'
-import { PRESET_TEMPLATES } from '@aura/db'
+import type { TemplateGroup, FieldDef, FieldType } from '@/lib/database-schema'
+import { PRESET_TEMPLATES } from '@/lib/database-schema'
 import { cn } from '@/lib/utils'
 
 interface SchemaBuilderProps {

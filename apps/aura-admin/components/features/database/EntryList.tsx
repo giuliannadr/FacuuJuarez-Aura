@@ -10,7 +10,7 @@ import {
   deleteEntry,
   generateExportToken,
 } from '@/app/(dashboard)/database/actions'
-import type { TemplateGroup, FieldDef } from '@aura/db'
+import type { TemplateGroup, FieldDef } from '@/lib/database-schema'
 import { PhoneInput, EventDatePicker } from '@/components/ui/booking-inputs'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
