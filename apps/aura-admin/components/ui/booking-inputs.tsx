@@ -115,17 +115,20 @@ interface CalendarNavProps {
 
 function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavProps) {
   const [popup, setPopup] = useState<'none' | 'month' | 'year'>('none')
+  // For !lockPast (birthdate mode): decade page. Start = oldest year shown.
+  // Initial page: todayYear-9 so the first view shows the last 10 years.
+  const todayYear = new Date().getFullYear()
+  const [decadeStart, setDecadeStart] = useState(todayYear - 9)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const currentYear = currentMonth.getFullYear()
   const currentMonthIdx = currentMonth.getMonth()
-  const todayYear = new Date().getFullYear()
   const todayMonth = new Date().getMonth()
 
-  // When locked to future: 12 years forward. When past allowed: 30 past + 5 forward
-  const yearOptions = lockPast
-    ? Array.from({ length: 12 }, (_, i) => todayYear + i)
-    : Array.from({ length: 35 }, (_, i) => todayYear - 30 + i)
+  // Future mode: 12 years forward (no pagination needed)
+  const futureYears = Array.from({ length: 12 }, (_, i) => todayYear + i)
+  // Past mode: 10 years in the current decade page, shown newest→oldest
+  const decadeYears = Array.from({ length: 10 }, (_, i) => decadeStart + 9 - i)
 
   const isAtMin = lockPast && currentYear === todayYear && currentMonthIdx <= todayMonth
 
@@ -253,26 +256,73 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
         </div>
       )}
 
-      {/* Year popup — same 3-col grid as months, scrollable */}
+      {/* Year popup */}
       {popup === 'year' && (
-        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-56 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2 max-h-60 overflow-y-auto">
-          <div className="grid grid-cols-3 gap-1">
-            {yearOptions.map((year) => (
-              <button
-                key={year}
-                type="button"
-                onClick={() => selectYear(year)}
-                className={cn(
-                  'rounded-lg px-2 py-2 text-xs font-medium text-center transition-colors',
-                  year === currentYear
-                    ? 'bg-violet-600 text-white'
-                    : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
-                )}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
+        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-52 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2">
+          {!lockPast ? (
+            /* Decade paginator: 10 years, newest first, arrows to go further back */
+            <>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <button
+                  type="button"
+                  onClick={() => setDecadeStart((s) => s - 10)}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+                  {decadeStart} — {decadeStart + 9}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDecadeStart((s) => s + 10)}
+                  disabled={decadeStart + 10 > todayYear}
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {decadeYears.map((year) => (
+                  <button
+                    key={year}
+                    type="button"
+                    disabled={year > todayYear}
+                    onClick={() => selectYear(year)}
+                    className={cn(
+                      'rounded-lg px-2 py-2 text-xs font-medium text-center transition-colors',
+                      year === currentYear
+                        ? 'bg-violet-600 text-white'
+                        : year > todayYear
+                          ? 'text-zinc-300 dark:text-zinc-700 cursor-not-allowed'
+                          : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
+                    )}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            /* Future mode: simple 3-col grid */
+            <div className="grid grid-cols-3 gap-1">
+              {futureYears.map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  onClick={() => selectYear(year)}
+                  className={cn(
+                    'rounded-lg px-2 py-2 text-xs font-medium text-center transition-colors',
+                    year === currentYear
+                      ? 'bg-violet-600 text-white'
+                      : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5'
+                  )}
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
