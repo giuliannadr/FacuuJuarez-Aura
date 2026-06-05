@@ -122,10 +122,10 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
   const todayYear = new Date().getFullYear()
   const todayMonth = new Date().getMonth()
 
-  // When locked to future: 12 years forward. When past allowed: 15 past + 5 forward
+  // When locked to future: 12 years forward. When past allowed: 30 past + 5 forward
   const yearOptions = lockPast
     ? Array.from({ length: 12 }, (_, i) => todayYear + i)
-    : Array.from({ length: 20 }, (_, i) => todayYear - 15 + i)
+    : Array.from({ length: 35 }, (_, i) => todayYear - 30 + i)
 
   const isAtMin = lockPast && currentYear === todayYear && currentMonthIdx <= todayMonth
 
@@ -253,9 +253,9 @@ function CalendarNav({ currentMonth, onChange, lockPast = false }: CalendarNavPr
         </div>
       )}
 
-      {/* Year popup — same 3-col grid as months */}
+      {/* Year popup — same 3-col grid as months, scrollable */}
       {popup === 'year' && (
-        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-56 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2">
+        <div className="absolute left-1/2 top-full mt-1.5 z-50 -translate-x-1/2 w-56 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-2xl p-2 max-h-60 overflow-y-auto">
           <div className="grid grid-cols-3 gap-1">
             {yearOptions.map((year) => (
               <button
