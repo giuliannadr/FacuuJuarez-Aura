@@ -53,7 +53,7 @@ function SectionTitle({ children, className }: { children: React.ReactNode; clas
   )
 }
 
-/** Simple on/off toggle switch */
+/** Compact inline toggle */
 function Toggle({
   checked,
   onChange,
@@ -66,31 +66,33 @@ function Toggle({
   description?: string
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-4 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] px-4 py-3 transition-colors hover:bg-zinc-100 dark:hover:bg-white/5"
-    >
-      <div className="text-left">
-        <p className="text-sm font-medium text-zinc-900 dark:text-white">{label}</p>
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-200">{label}</p>
         {description && (
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">{description}</p>
         )}
       </div>
-      <div
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
         className={cn(
-          'relative h-5 w-9 shrink-0 rounded-full transition-colors duration-200',
+          'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent',
+          'transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2',
           checked ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-600'
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-            checked ? 'translate-x-4' : 'translate-x-0.5'
+            'pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-md ring-0',
+            'transition-transform duration-200 ease-in-out',
+            checked ? 'translate-x-4' : 'translate-x-0'
           )}
         />
-      </div>
-    </button>
+      </button>
+    </div>
   )
 }
 
